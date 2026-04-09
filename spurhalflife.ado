@@ -1,5 +1,4 @@
-*! version 1.0.0  21jan2025 pdavidboll
-mata mata clear
+*! version 1.0.1  26mar2026 pdavidboll
 mata mata set matastrict on
 
 program define spurhalflife, rclass
