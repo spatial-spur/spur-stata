@@ -15,6 +15,8 @@ d Support: post an issue under https://github.com/pdavidboll/SPUR/issues
 d
 f spurtest.ado
 f spurtest.sthlp
+f spur.ado
+f spur.sthlp
 f spurtransform.ado
 f spurtransform.sthlp
 f spurhalflife.ado

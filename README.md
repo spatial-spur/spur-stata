@@ -32,9 +32,12 @@ Then, you can run the example do-file, which reproduces Table 1 from [Müller an
 
 ## Basic Usage
 
-The package is made up of three commands: `spurtest`, `spurtransform`, and `spurhalflife`. Example uses of these commands are shown below.
+The package includes one wrapper `spur` implementing the whole workflow, and the individual commands `spurtest`, `spurtransform`, and `spurhalflife`. Example uses of these commands:.
 
 ```stata
+// Run the full OLS workflow
+spur am gini fracblack, latlong replace
+
 // Test the null hypothesis of a spatial unit root in the variable am
 spurtest i1 am, latlong
 
@@ -54,4 +57,3 @@ Becker, Sascha O., P. David Boll and Hans-Joachim Voth "Testing and Correcting f
 Chetty, Raj, Nathaniel Hendren, Patrick Kline, Emmanuel Saez "Where is the land of Opportunity? The Geography of Intergenerational Mobility in the United States" , The Quarterly Journal of Economics 129(4) (2014), 1553–1623, https://doi.org/10.1093/qje/qju022
 
 Müller, Ulrich K. and Mark W. Watson "Spatial Unit Roots and Spurious Regression", Econometrica 92(5) (2024), 1661–1695. https://www.princeton.edu/~umueller/SPUR.pdf.
-
