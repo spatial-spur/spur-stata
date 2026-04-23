@@ -6,6 +6,7 @@ This page documents the public `spur-stata` command surface.
 
 | Command | Description |
 |---|---|
+| `spur` | Run the full SPUR workflow and return diagnostics plus levels and transformed branches |
 | `spurtest` | Run one of the four SPUR diagnostic tests |
 | `spurtransform` | Transform variables to remove spatial unit roots |
 | `spurhalflife` | Estimate a spatial half-life confidence interval |
@@ -33,6 +34,55 @@ The SPUR tests and half-life interval are simulation-based.
 
 - `q(#)`: number of low-frequency weighted averages; default `q(15)`
 - `nrep(#)`: number of Monte Carlo draws; default `nrep(100000)`
+
+## Full Workflow
+
+### `spur`
+
+Run the full SPUR workflow for a linear regression.
+
+**Syntax**
+
+```stata
+spur depvar indepvars [if] [in] [, q(#) nrep(#) latlong avc(#) uncond cvs replace]
+```
+
+**Behavior**
+
+- runs `spurtest i0` and `spurtest i1` on the dependent variable
+- runs `spurtest i0resid` and `spurtest i1resid` for the regression
+- estimates the levels regression with `regress ..., robust`
+- runs the external `scpc` postestimation command
+- transforms the dependent and independent variables with `spurtransform`,
+  using `prefix(h_)` and `transformation(lbmgls)`
+- estimates the transformed regression with `regress ..., robust`
+- runs `scpc` again
+
+The wrapper always computes both the levels and transformed branches. It does
+not encode the practitioner-guide branch decision as a returned field.
+
+**Options**
+
+- `q(#)`, `nrep(#)`, `latlong`: passed to the SPUR diagnostic tests
+- `avc(#)`, `uncond`, `cvs`: passed to `scpc`
+- `replace`: allow overwriting existing transformed `h_*` variables
+
+**Stored results**
+
+`spur` stores the following main results in `r()`:
+
+- `r(diagnostics)`: rows `i0`, `i1`, `i0resid`, `i1resid`; columns
+  `teststat`, `p`, `ha_param`
+- `r(levels_scpcstats)`: SCPC inference table from the levels regression
+- `r(transformed_scpcstats)`: SCPC inference table from the transformed
+  regression
+- `r(levels_scpccvs)` and `r(transformed_scpccvs)`: critical-value matrices
+  when `cvs` is specified
+- diagnostic scalar aliases such as `r(i0_p)` and `r(i1resid_teststat)`
+- model-statistic scalars such as `r(levels_N)` and `r(transformed_r2)`
+
+The wrapper is OLS-only. IV and fixed-effect workflows should be estimated
+directly and followed by `scpc`.
 
 ## Diagnostics
 
@@ -150,11 +200,6 @@ If `normdist` is not specified, the interval is reported in metres under
 
 ## Workflow Note
 
-`spur-stata` does not currently provide a one-command pipeline wrapper. The
-intended workflow is:
-
-1. run `spurtest` on the dependent variable
-2. choose the levels or transformed branch
-3. use `spurtransform` if the specification needs differencing
-4. estimate the regression
-5. call the external `scpc` command for inference
+Use `spur` for the full OLS pipeline in one command. Use `spurtest`,
+`spurtransform`, `spurhalflife`, and direct `scpc` calls when you want only
+selected steps or when you need IV / fixed-effect estimation.
