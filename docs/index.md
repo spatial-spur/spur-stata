@@ -90,17 +90,6 @@ regress h_am h_gini h_fracblack, robust
 scpc, latlong
 ```
 
-### Sanity check
-
-As a sanity check, we recommend validating that your regression residuals do not
-have a spatial unit root. You can do that using the `I(0) residual` and `I(1)
-residual` tests:
-
-```stata
-spurtest i0resid am gini fracblack, latlong
-spurtest i1resid am gini fracblack, latlong
-```
-
 ### Pipeline wrapper
 
 As a shortcut to implementing all of those steps individually, we also provide a
@@ -114,6 +103,16 @@ spur am gini fracblack, latlong replace
 The wrapper stores diagnostics in `r(diagnostics)`, levels inference in
 `r(levels_scpcstats)`, and transformed inference in
 `r(transformed_scpcstats)`.
+
+### Residual tests
+
+We also provide tests for spatial unit roots in regression residuals
+rather than the dependent variable itself:
+
+```stata
+spurtest i0resid am gini fracblack, latlong
+spurtest i1resid am gini fracblack, latlong
+```
 
 ## SCPC-only workflows
 
