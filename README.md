@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="SPUR logo">
+</p>
+
 # `spur`: A Stata Package around Spatial Unit Roots
 
 This package implements methods for diagnosing and correcting spatial unit roots developed by Müller and Watson (2024). A practical guide to these methods and the Stata implementation can be found in [Becker, Boll and Voth (2026)](https://pauldavidboll.com/SPUR_Stata_Journal_website.pdf).
