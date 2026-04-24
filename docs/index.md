@@ -18,14 +18,16 @@ net install scpc, from("https://raw.githubusercontent.com/ukmueller/SCPC/master/
 
 ## Example: Chetty Dataset
 
-This walkthrough follows the practitioner guide in Becker, Boll, and Voth
-(2026). The branch decision is based on the dependent-variable `I(0)` and
-`I(1)` tests, using a 10% significance level.
+In this example, we walk you through the workflow we recommend with the
+packages step-by-step. We also provide a one-stop [pipeline wrapper](#pipeline-wrapper)
+implementing the entire workflow in one step.
 
-## 1. Prepare the sample
+### Data preparation
 
-Construct the estimation sample and retain the variables used in the
-diagnostics and regression.
+For illustration, we load the Chetty dataset we ship as part of the package. Of
+course, the analysis in principle follows the same logic on any other dataset.
+In this specific case, we first omit the non-contiguous US states. We also drop
+rows with missing values.
 
 ```stata
 import excel "example_data/Chetty_Data_1.xlsx", ///
@@ -41,97 +43,81 @@ keep am gini fracblack s_1 s_2 state
 drop if missing(am, gini, fracblack, s_1, s_2)
 ```
 
-`spur-stata` expects the coordinate variables to be named `s_1`, `s_2`. 
+In Stata, the SPUR and SCPC commands expect coordinate variables named `s_1`
+and `s_2`.
 With `latlong`, `s_1` is latitude and `s_2` is longitude.
 
-## 2. Run the full pipeline wrapper
+### Testing for a spatial unit root
 
-Use `spur` when you want the full OLS workflow in one command. It runs the
-diagnostics, estimates the levels branch, runs `scpc`, transforms the model
-variables with `lbmgls`, estimates the transformed branch, and runs `scpc`
-again.
+Based on MW 2024, we suggest first testing for a spatial unit root setting
+using the `I(0)` and `I(1)` tests on the dependent variable.
 
-```stata
-spur am gini fracblack, q(15) nrep(100000) latlong replace
-```
-
-The wrapper stores diagnostics in `r(diagnostics)`, levels inference in
-`r(levels_scpcstats)`, and transformed inference in
-`r(transformed_scpcstats)`.
-
-## 3. Run individual commands instead
-
-Use the individual commands when you want only selected parts of the workflow.
-
-### Test the dependent variable against the I(0) alternative
-
-The first diagnostic tests the dependent variable under the spatial `I(0)`
-null.
+One way to do this is to use the `spurtest i0` and `spurtest i1` commands
+directly:
 
 ```stata
+// am is the dependent variable
 spurtest i0 am, latlong
-```
-
-The command stores the main results in `r()`, including `r(teststat)` and
-`r(p)`.
-
-### Test the dependent variable against the I(1) alternative
-
-The second diagnostic tests the same variable under the spatial `I(1)` null.
-
-```stata
 spurtest i1 am, latlong
 ```
 
-### Apply the decision rule
+### Interpreting the test statistics
 
-Using a 10% significance threshold:
+Using a 10% significance threshold, we suggest interpreting the results with the following heuristic:
 
-- If you do **not** reject `I(0)` and you **do** reject `I(1)`, proceed in
-  levels.
-- In every other case, treat the specification as requiring spatial
-  differencing and transform the dependent and independent variables together.
+- If you do **not** reject `I(0)` and you **do** reject `I(1)`, there is **likely no spatial unit root** and you can proceed in levels
+- every other case implies a **possible spatial unit root** - in that case, we suggest transforming all dependent and independent variables before running regressions
 
-### Levels branch
+We suggest always applying SCPC inference.
 
-Use this branch only when the decision rule implies that the dependent variable
-is consistent with `I(0)` and inconsistent with `I(1)`.
+### Case 1: likely no spatial unit root
+
+If the heuristic implies your scenario is unlikely to be a spatial unit root, we suggest proceeding in levels but applying SCPC inference:
 
 ```stata
-reg am gini fracblack, robust
+regress am gini fracblack, robust
 scpc, latlong
 ```
 
-In this branch there is no SPUR transformation step; the regression is
-estimated in levels and `scpc` is used for inference.
+### Case 2: likely spatial unit root
 
-### Transformed branch
-
-In every other case, transform the dependent and independent variables
-together, re-estimate the regression on the transformed data, and use `scpc`
-for inference there.
+If you do have a likely spatial unit root according to the heuristic above, we suggest applying the transformation and running the regression on transformed variables with SCPC inference:
 
 ```stata
 spurtransform am gini fracblack, prefix(h_) transformation(lbmgls) latlong replace
 
-reg h_am h_gini h_fracblack, robust
+regress h_am h_gini h_fracblack, robust
 scpc, latlong
 ```
 
-The default empirical branch is the `lbmgls` transformation.
+### Sanity check
 
-### Residual diagnostics
-
-`spur-stata` also provides residual-based `I(0)` and `I(1)` tests:
+As a sanity check, we recommend validating that your regression residuals do not
+have a spatial unit root. You can do that using the `I(0) residual` and `I(1)
+residual` tests:
 
 ```stata
 spurtest i0resid am gini fracblack, latlong
 spurtest i1resid am gini fracblack, latlong
 ```
 
-## 4. SCPC-only workflows
+### Pipeline wrapper
 
-The `spur` wrapper is OLS-only. For IV or fixed-effect models, estimate the
+As a shortcut to implementing all of those steps individually, we also provide a
+`spur` wrapper that implements the entire pipeline in one step. It simply runs
+all tests and returns all results.
+
+```stata
+spur am gini fracblack, latlong replace
+```
+
+The wrapper stores diagnostics in `r(diagnostics)`, levels inference in
+`r(levels_scpcstats)`, and transformed inference in
+`r(transformed_scpcstats)`.
+
+## SCPC-only workflows
+
+The `spur` wrapper is OLS-only. For IV models, estimate the
 model directly with the relevant Stata command and run `scpc` immediately
 afterward.
 
