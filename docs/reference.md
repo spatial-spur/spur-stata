@@ -34,6 +34,7 @@ The SPUR tests and half-life interval are simulation-based.
 
 - `q(#)`: number of low-frequency weighted averages; default `q(15)`
 - `nrep(#)`: number of Monte Carlo draws; default `nrep(100000)`
+- `seed(#)`: random seed for the simulation draws; default `seed(42)`
 
 ## Full Workflow
 
@@ -44,7 +45,7 @@ Run the full SPUR workflow for a linear regression.
 **Syntax**
 
 ```stata
-spur depvar indepvars [if] [in] [, q(#) nrep(#) latlong avc(#) uncond cvs replace]
+spur depvar indepvars [if] [in] [, q(#) nrep(#) seed(#) latlong avc(#) uncond cvs replace]
 ```
 
 **Behavior**
@@ -63,7 +64,7 @@ not encode the practitioner-guide branch decision as a returned field.
 
 **Options**
 
-- `q(#)`, `nrep(#)`, `latlong`: passed to the SPUR diagnostic tests
+- `q(#)`, `nrep(#)`, `seed(#)`, `latlong`: passed to the SPUR diagnostic tests
 - `avc(#)`, `uncond`, `cvs`: passed to `scpc`
 - `replace`: allow overwriting existing transformed `h_*` variables
 
@@ -93,10 +94,10 @@ Run one of the four SPUR tests.
 **Syntax**
 
 ```stata
-spurtest i1 varname [if] [in] [, q(#) nrep(#) latlong]
-spurtest i0 varname [if] [in] [, q(#) nrep(#) latlong]
-spurtest i1resid depvar [indepvars] [if] [in] [, q(#) nrep(#) latlong]
-spurtest i0resid depvar [indepvars] [if] [in] [, q(#) nrep(#) latlong]
+spurtest i1 varname [if] [in] [, q(#) nrep(#) seed(#) latlong]
+spurtest i0 varname [if] [in] [, q(#) nrep(#) seed(#) latlong]
+spurtest i1resid depvar [indepvars] [if] [in] [, q(#) nrep(#) seed(#) latlong]
+spurtest i0resid depvar [indepvars] [if] [in] [, q(#) nrep(#) seed(#) latlong]
 ```
 
 **Subcommands**
@@ -111,6 +112,7 @@ spurtest i0resid depvar [indepvars] [if] [in] [, q(#) nrep(#) latlong]
 - `q(#)`: number of weighted averages used in the test statistic
 - `nrep(#)`: number of Monte Carlo draws used to simulate the reference
   distribution
+- `seed(#)`: random seed for the simulation draws; default `seed(42)`
 - `latlong`: interpret `s_1` and `s_2` as latitude and longitude
 
 **Stored results**
@@ -175,13 +177,14 @@ Estimate a confidence interval for the spatial half-life of a variable.
 **Syntax**
 
 ```stata
-spurhalflife varname [if] [in] [, q(#) nrep(#) level(#) latlong normdist]
+spurhalflife varname [if] [in] [, q(#) nrep(#) seed(#) level(#) latlong normdist]
 ```
 
 **Options**
 
 - `q(#)`: number of weighted averages; default `q(15)`
 - `nrep(#)`: number of Monte Carlo draws; default `nrep(100000)`
+- `seed(#)`: random seed for the simulation draws; default `seed(42)`
 - `level(#)`: confidence level in percent; default `level(95)`
 - `latlong`: interpret `s_1` and `s_2` as latitude and longitude
 - `normdist`: report the interval as a fraction of the maximum pairwise

@@ -17,6 +17,7 @@
 {synoptline}
 {synopt :{opt q(#)}}specifies the number of weighted averages to be used in the test. The default is {opt q(15)}.{p_end}
 {synopt :{opt nrep(#)}}specifies the number of Monte Carlo draws to be used to simulate the distribution of the test statistic. The default is {opt nrep(100000)}.{p_end}
+{synopt :{opt seed(#)}}specifies the random seed used for the simulation draws. The default is {opt seed(42)}.{p_end}
 {synopt :{opt l:evel(#)}} specifies the desired confidence level in percent. The default is {opt level(95)}.{p_end}
 {synopt :{opt latlong}}specifies that the spatial coordinates are given in latitude (stored in {it:s_1}) and longitude (stored in {it:s_2}) (see below).{p_end}
 {synopt :{opt norm:dist}}specifies that the results are to be returned as fractions of the maximum pairwise distance in the sample.{p_end}
@@ -54,6 +55,9 @@ Note: This command and all others in this package rely on the {cmd: moremata} pa
 
 {phang}
 {opt nrep(#)} specifies the number of Monte Carlo draws to be used to simulate the distribution of the test statistic. The default is {opt nrep(100000)}. See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2025:Becker et. al (2025)} for details.
+
+{phang}
+{opt seed(#)} specifies the random seed used for the simulation draws. The default is {opt seed(42)}.
 
 {phang}
 {opt l:evel(#)} specifies the desired confidence level in percent. The default is {opt level(95)}.

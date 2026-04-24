@@ -17,6 +17,7 @@
 {synoptline}
 {synopt :{opt q(#)}}number of weighted averages used in the SPUR tests; default is {opt q(15)}{p_end}
 {synopt :{opt nrep(#)}}number of Monte Carlo draws used in the SPUR tests; default is {opt nrep(100000)}{p_end}
+{synopt :{opt seed(#)}}random seed used for the SPUR simulation draws; default is {opt seed(42)}{p_end}
 {synopt :{opt latlong}}interpret {it:s_1} as latitude and {it:s_2} as longitude{p_end}
 {synopt :{opt avc(#)}}maximal average pairwise correlation passed to {cmd:scpc}; default is {opt avc(0.03)}{p_end}
 {synopt :{opt uncond}}pass {opt uncond} to {cmd:scpc}{p_end}

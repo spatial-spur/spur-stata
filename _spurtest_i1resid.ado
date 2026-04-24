@@ -1,7 +1,7 @@
 *! version 1.0.0  21jan2025 pdavidboll
 program define _spurtest_i1resid, rclass sortpreserve
 	version 14
-	syntax varlist(numeric) [if] [in], [q(int 15) nrep(int 100000) latlong ]
+	syntax varlist(numeric) [if] [in], [q(int 15) nrep(int 100000) seed(int 42) latlong ]
 	marksample touse
 	
 	gettoken yname xnames_nocons: varlist
@@ -10,6 +10,7 @@ program define _spurtest_i1resid, rclass sortpreserve
 	
 	mata: q = `q'
 	mata: nrep = `nrep'
+	set seed `seed'
 	mata: emat = rnormal(q, nrep, 0, 1)
 	
 	mata: y = st_data(., "`yname'", "`touse'")

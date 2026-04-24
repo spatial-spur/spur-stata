@@ -1,13 +1,14 @@
 *! version 1.0.0  21jan2025 pdavidboll
 program define _spurtest_i1, rclass
 	version 14
-	syntax varname(numeric) [if] [in] , [q(int 15) nrep(int 100000) latlong ]
+	syntax varname(numeric) [if] [in] , [q(int 15) nrep(int 100000) seed(int 42) latlong ]
 	marksample touse
 	
 	tempname p teststat c_a cv
 		
 	mata: q = `q'
 	mata: nrep = `nrep'
+	set seed `seed'
 	mata: emat = rnormal(q, nrep, 0, 1)
 	
 	mata: y = st_data(., "`varlist'", "`touse'")

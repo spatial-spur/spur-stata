@@ -3,7 +3,7 @@ mata mata set matastrict on
 
 program define spurhalflife, rclass
 	version 14
-	syntax varname(numeric) [if] [in] , [q(int 15) nrep(int 100000) Level(real 95) latlong NORMdist]
+	syntax varname(numeric) [if] [in] , [q(int 15) nrep(int 100000) seed(int 42) Level(real 95) latlong NORMdist]
 	marksample touse
 	
 	// check moremata installed
@@ -23,6 +23,7 @@ program define spurhalflife, rclass
 		
 	mata: q = `q'
 	mata: nrep = `nrep'
+	set seed `seed'
 	mata: emat = rnormal(q, nrep, 0, 1)
 	
 	mata: y = st_data(., "`varlist'", "`touse'")

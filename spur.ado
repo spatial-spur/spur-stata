@@ -6,6 +6,7 @@ program define spur, rclass sortpreserve
 		[ ///
 			q(int 15) ///
 			nrep(int 100000) ///
+			seed(int 42) ///
 			latlong ///
 			avc(real -1) ///
 			uncond ///
@@ -39,7 +40,7 @@ program define spur, rclass sortpreserve
 	local transformation lbmgls
 	local ncoef : word count `varlist'
 
-	local test_options q(`q') nrep(`nrep')
+	local test_options q(`q') nrep(`nrep') seed(`seed')
 	if "`latlong'"!="" {
 		local test_options `test_options' latlong
 	}
