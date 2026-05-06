@@ -137,7 +137,7 @@ If you have suggestions or want to report problems, please create a new issue in
 {title:References}
 
 {marker bbv2026}{...}
-{phang}Becker, Sascha O., P. David Boll and Hans-Joachim Voth "Testing and Correcting for Spatial Unit Roots in Regression Analysis", The Stata Journal, in press.
+{phang}Becker, Sascha O., P. David Boll and Hans-Joachim Voth "Testing and Correcting for Spatial Unit Roots in Regression Analysis", The Stata Journal, forthcoming.
 
 {marker mw2022}{...}
 {phang}Müller, Ulrich K. and Mark W. Watson "Spatial Correlation Robust Inference", Econometrica 90 (2022), 2901–2935. {browse "https://www.princeton.edu/~umueller/SHAR.pdf"}.
