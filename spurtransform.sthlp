@@ -33,7 +33,7 @@
 This command implements four spatial differencing transformations proposed by {help spurtest##mw2024:Müller and Watson (2024)} to eliminate unit roots in spatial processes. By default, it applies the LBM-GLS transformation, favoured by {help spurtest##mw2024:Müller and Watson (2024)}. Other transformations can be selected using the {opt transformation()} option.
 
 {pstd}
-{cmd:spurtransform} is part of a package of commands that also includes {cmd:spurtest} and {cmd:spurhalflife}. A practical guide to these methods is provided in a paper accompanying this implementation ({help spurtest##bbv2025:Becker et. al (2025)}), please cite this paper when using this code.
+{cmd:spurtransform} is part of a package of commands that also includes {cmd:spurtest} and {cmd:spurhalflife}. A practical guide to these methods is provided in a paper accompanying this implementation ({help spurtest##bbv2026:Becker et al. (2026)}), please cite this paper when using this code.
 
 {pstd}
 Note: For this command (and all other commands in this package) to work, the spatial coordinates must be stored in the variables {it:s_*}, where * is a positive integer. This is for consistency with the {cmd:scpc} command developed by {help spurtest##mw2022:Müller and Watson (2022, 2023)} (available from Ulrich Müller's website), which this package is designed to work alongside. 
@@ -70,7 +70,7 @@ Note: This command and all others in this package rely on the {cmd: moremata} pa
 {opt transformation(lbmgls)} requests the LBM-GLS transformation, i.e. GLS transformation based on the covariance matrix of a Lévy-Brownian motion. This is the default option.
 
 {phang2}
-See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2025:Becker et. al (2025)} for details.
+See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker et al. (2026)} for details.
 
 {phang}
 {opt radius(#)} specifies the radius in metres (if {opt latlong}), or in the units of the original coordinates (if not {opt latlong}), which is to be used for isotropic differencing. Only allowed with {opt transformation(iso)}.
@@ -136,8 +136,8 @@ If you have suggestions or want to report problems, please create a new issue in
 {marker references}{...}
 {title:References}
 
-{marker bbv2025}{...}
-{phang}Becker, Sascha O., P. David Boll and Hans-Joachim Voth "Spatial Unit Roots in Regressions: A Practitioner's Guide and a Stata Package", 2025.
+{marker bbv2026}{...}
+{phang}Becker, Sascha O., P. David Boll and Hans-Joachim Voth "Testing and Correcting for Spatial Unit Roots in Regression Analysis", The Stata Journal, in press.
 
 {marker mw2022}{...}
 {phang}Müller, Ulrich K. and Mark W. Watson "Spatial Correlation Robust Inference", Econometrica 90 (2022), 2901–2935. {browse "https://www.princeton.edu/~umueller/SHAR.pdf"}.
@@ -146,5 +146,5 @@ If you have suggestions or want to report problems, please create a new issue in
 {phang}Müller, Ulrich K. and Mark W. Watson "Spatial Correlation Robust Inference in Linear Regression and Panel Models", Journal of Business and Economic Statistics 41 (2023), 1050–1064. {browse "https://www.princeton.edu/~umueller/SpatialRegression.pdf"}.
 
 {marker mw2024}{...}
-{phang}Müller, Ulrich K. and Mark W. Watson "Spatial Unit Roots and Spurious Regression", Econometrica 92 (2024), 1661–1695. {browse "https://www.princeton.edu/~umueller/SPUR.pdf"}.
+{phang}Müller, Ulrich K. and Mark W. Watson "Spatial Unit Roots and Spurious Regression", Econometrica 92(5) (2024), 1661–1695. doi:10.3982/ECTA21654. {browse "https://www.princeton.edu/~umueller/SPUR.pdf"}.
 {p_end}

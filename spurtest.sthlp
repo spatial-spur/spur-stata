@@ -54,7 +54,7 @@ Spatial I(0) test for residuals
 This command implements four tests developed by {help spurtest##mw2024:Müller and Watson (2024)} to diagnose unit roots in spatial processes. {cmd:spurtest i1resid} and {cmd:spurtest i0resid} test the null hypotheses of I(1) (unit root) and I(0) (stationarity), respectively, for an observed outcome variable {it:varname}. {cmd:spurtest i1} and {cmd:spurtest i0} test these hypotheses for the errors of a linear regression of {it:depvar} on {it:indepvars} (a constant is automatically included). 
 
 {pstd}
-{cmd:spurtest} is part of a package of commands that also includes {cmd:spurtransform} and {cmd:spurhalflife}. A practical guide to these methods is provided in a paper accompanying this implementation ({help spurtest##bbv2025:Becker et. al (2025)}), please cite this paper when using this code.
+{cmd:spurtest} is part of a package of commands that also includes {cmd:spurtransform} and {cmd:spurhalflife}. A practical guide to these methods is provided in a paper accompanying this implementation ({help spurtest##bbv2026:Becker et al. (2026)}), please cite this paper when using this code.
 
 {pstd}
 Note: For this command (and all other commands in this package) to work, the spatial coordinates must be stored in the variables {it:s_*}, where * is a positive integer. This is for consistency with the {cmd:scpc} command developed by {help spurtest##mw2022:Müller and Watson (2022, 2023)} (available from Ulrich Müller's website), which this package is designed to work alongside. 
@@ -73,10 +73,10 @@ Note: This command and all others in this package rely on the {cmd: moremata} pa
 {title:Options}
 
 {phang}
-{opt q(#)} specifies the number of weighted averages to be used in the test. The default is {opt q(15)}. See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2025:Becker et. al (2025)} for details.
+{opt q(#)} specifies the number of weighted averages to be used in the test. The default is {opt q(15)}. See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker et al. (2026)} for details.
 
 {phang}
-{opt nrep(#)} specifies the number of Monte Carlo draws to be used to simulate the distribution of the test statistic. The default is {opt nrep(100000)}. See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2025:Becker et. al (2025)} for details.
+{opt nrep(#)} specifies the number of Monte Carlo draws to be used to simulate the distribution of the test statistic. The default is {opt nrep(100000)}. See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker et al. (2026)} for details.
 
 {phang}
 {opt seed(#)} specifies the random seed used for the simulation draws. The default is {opt seed(42)}.
@@ -105,7 +105,7 @@ Note: This command and all others in this package rely on the {cmd: moremata} pa
 {p2col 5 23 26 2: Scalars}{p_end}
 {synopt:{cmd:r(teststat)}}Test statistic (LFUR or LFST){p_end}
 {synopt:{cmd:r(p)}}P-value of the test{p_end}
-{synopt:{cmd:r(ha_param)}}Parameter for alternative hypothesis (c_a or g_a). See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2025:Becker et. al (2025)} for details. {p_end}
+{synopt:{cmd:r(ha_param)}}Parameter for alternative hypothesis (c_a or g_a). See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker et al. (2026)} for details. {p_end}
 
 {p2col 5 15 19 2: Matrices}{p_end}
 {synopt:{cmd:r(cv)}}Critical values at 1%, 5%, and 10% levels.{p_end}
@@ -149,8 +149,8 @@ If you have suggestions or want to report problems, please create a new issue in
 {marker references}{...}
 {title:References}
 
-{marker bbv2025}{...}
-{phang}Becker, Sascha O., P. David Boll and Hans-Joachim Voth "Spatial Unit Roots in Regressions: A Practitioner's Guide and a Stata Package", 2025.
+{marker bbv2026}{...}
+{phang}Becker, Sascha O., P. David Boll and Hans-Joachim Voth "Testing and Correcting for Spatial Unit Roots in Regression Analysis", The Stata Journal, in press.
 
 {marker mw2022}{...}
 {phang}Müller, Ulrich K. and Mark W. Watson "Spatial Correlation Robust Inference", Econometrica 90 (2022), 2901–2935. {browse "https://www.princeton.edu/~umueller/SHAR.pdf"}.
@@ -159,5 +159,5 @@ If you have suggestions or want to report problems, please create a new issue in
 {phang}Müller, Ulrich K. and Mark W. Watson "Spatial Correlation Robust Inference in Linear Regression and Panel Models", Journal of Business and Economic Statistics 41 (2023), 1050–1064. {browse "https://www.princeton.edu/~umueller/SpatialRegression.pdf"}.
 
 {marker mw2024}{...}
-{phang}Müller, Ulrich K. and Mark W. Watson "Spatial Unit Roots and Spurious Regression", Econometrica 92 (2024), 1661–1695. {browse "https://www.princeton.edu/~umueller/SPUR.pdf"}.
+{phang}Müller, Ulrich K. and Mark W. Watson "Spatial Unit Roots and Spurious Regression", Econometrica 92(5) (2024), 1661–1695. doi:10.3982/ECTA21654. {browse "https://www.princeton.edu/~umueller/SPUR.pdf"}.
 {p_end}

@@ -111,8 +111,8 @@ spatial-spur
 
 {phang}
 Becker, Sascha O., P. David Boll and Hans-Joachim Voth "Testing and Correcting
-for Spatial Unit Roots in Regression Analysis", Stata Journal, forthcoming.
+for Spatial Unit Roots in Regression Analysis", The Stata Journal, in press.
 
 {phang}
 Müller, Ulrich K. and Mark W. Watson "Spatial Unit Roots and Spurious
-Regression", Econometrica 92 (2024), 1661-1695.
+Regression", Econometrica 92(5) (2024), 1661-1695. doi:10.3982/ECTA21654.

@@ -12,9 +12,10 @@ This package implements methods for diagnosing and correcting spatial unit roots
 @Article{becker2026,
   author    = {Becker, Sascha O. and Boll, P. David and Voth, Hans-Joachim},
   title     = {Testing and Correcting for Spatial Unit Roots in Regression Analysis},
-  journal   = {Stata Journal},
-  year      = {forthcoming},
-  note      = {Forthcoming}
+  journal   = {The Stata Journal},
+  year      = {2026},
+  note      = {In press},
+  url       = {https://wrap.warwick.ac.uk/id/eprint/194576/}
 }
 ```
 
@@ -56,7 +57,7 @@ For details, see the help files, as well as [Becker, Boll and Voth (2026)](https
 
 ## References
 
-Becker, Sascha O., P. David Boll and Hans-Joachim Voth "Testing and Correcting for Spatial Unit Roots in Regression Analysis", Forthcoming at the Stata Journal.
+Becker, Sascha O., P. David Boll and Hans-Joachim Voth "Testing and Correcting for Spatial Unit Roots in Regression Analysis", The Stata Journal, in press.
 
 Chetty, Raj, Nathaniel Hendren, Patrick Kline, Emmanuel Saez "Where is the land of Opportunity? The Geography of Intergenerational Mobility in the United States" , The Quarterly Journal of Economics 129(4) (2014), 1553–1623, https://doi.org/10.1093/qje/qju022
 

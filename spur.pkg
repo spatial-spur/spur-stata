@@ -3,7 +3,7 @@ d 'spur': Spatial Unit Roots in Regressions
 d
 d This package implements methods for diagnosing and correcting spatial unit roots
 d developed by Müller and Watson (2024). When using this code, please cite 
-d Becker, Boll and Voth (2025).
+d Becker, Boll and Voth (2026).
 d 
 d Requires: Stata version 14 
 d
