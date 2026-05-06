@@ -4,9 +4,9 @@
 
 # `spur`: A Stata Package around Spatial Unit Roots
 
-This package implements methods for diagnosing and correcting spatial unit roots developed by Müller and Watson (2024). A practical guide to these methods and the Stata implementation can be found in [Becker, Boll and Voth (2026)](https://pauldavidboll.com/SPUR_Stata_Journal_website.pdf).
+This package implements methods for diagnosing and correcting spatial unit roots developed by Müller & Watson 2024. A practical guide to these methods and the Stata implementation can be found in [Becker et al. 2026](https://pauldavidboll.com/SPUR_Stata_Journal_website.pdf).
 
-**Citation:** If you use this package, please cite `bbv2026` and `mw2024`. See [CITATION.cff](CITATION.cff) for copyable citation metadata.
+**Citation:** If you use this package, please cite Becker et al. 2026 and Müller & Watson 2024. See [CITATION.bib](CITATION.bib) for the BibTeX entries.
 
 If you encounter any issues or have any questions, please open an issue on GitHub or contact the authors.
 
@@ -20,7 +20,7 @@ If you *also* want to download the example data and do-file (will be saved to th
 
     . net get spur, replace from(https://raw.githubusercontent.com/pdavidboll/spur/main/)
 
-Then, you can run the example do-file, which reproduces Table 1 from [Müller and Watson (2024)](https://www.princeton.edu/~umueller/SPUR.pdf) based on the data from [Chetty et. al. (2014)](https://doi.org/10.1093/qje/qju022) (see [Becker, Boll and Voth (2026)](https://pauldavidboll.com/SPUR_Stata_Journal_website.pdf) for details):
+Then, you can run the example do-file, which reproduces Table 1 from [Müller & Watson 2024](https://www.princeton.edu/~umueller/SPUR.pdf) based on the data from [Chetty et. al. (2014)](https://doi.org/10.1093/qje/qju022) (see [Becker et al. 2026](https://pauldavidboll.com/SPUR_Stata_Journal_website.pdf) for details):
 
     . do example
 
@@ -42,7 +42,7 @@ spurtransform am, prefix("h_") latlong
 spurhalflife am, latlong                
 
 ```
-For details, see the help files, as well as [Becker, Boll and Voth (2026)](https://pauldavidboll.com/SPUR_Stata_Journal_website.pdf).
+For details, see the help files, as well as [Becker et al. 2026](https://pauldavidboll.com/SPUR_Stata_Journal_website.pdf).
 
 ## References
 
