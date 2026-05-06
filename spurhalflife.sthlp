@@ -32,7 +32,7 @@
 This command implements a method to construct confidence sets about the half-life of spatial processes developed by {help spurtest##mw2024:Müller and Watson (2024)}. This inference is based on the persistence parameter in the Spatial Local-to-Unity model, which maps directly into the half-life (i.e., the distance at which the correlation is 1/2).
 
 {pstd}
-{cmd:spurhalflife} is part of a package of commands that also includes {cmd:spurtest} and {cmd:spurtransform}. A practical guide to these methods is provided in a paper accompanying this implementation ({help spurtest##bbv2026:Becker et al. (2026)}), please cite this paper when using this code.
+{cmd:spurhalflife} is part of a package of commands that also includes {cmd:spurtest} and {cmd:spurtransform}. A practical guide to these methods is provided in a paper accompanying this implementation ({help spurtest##bbv2026:Becker, Boll and Voth (2026)}), please cite this paper when using this code.
 
 {pstd}
 Note: For this command (and all other commands in this package) to work, the spatial coordinates must be stored in the variables {it:s_*}, where * is a positive integer. This is for consistency with the {cmd:scpc} command developed by {help spurtest##mw2022:Müller and Watson (2022, 2023)} (available from Ulrich Müller's website), which this package is designed to work alongside. 
@@ -51,10 +51,10 @@ Note: This command and all others in this package rely on the {cmd: moremata} pa
 {title:Options}
 
 {phang}
-{opt q(#)} specifies the number of weighted averages to be used in the test. The default is {opt q(15)}. See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker et al. (2026)} for details.
+{opt q(#)} specifies the number of weighted averages to be used in the test. The default is {opt q(15)}. See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker, Boll and Voth (2026)} for details.
 
 {phang}
-{opt nrep(#)} specifies the number of Monte Carlo draws to be used to simulate the distribution of the test statistic. The default is {opt nrep(100000)}. See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker et al. (2026)} for details.
+{opt nrep(#)} specifies the number of Monte Carlo draws to be used to simulate the distribution of the test statistic. The default is {opt nrep(100000)}. See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker, Boll and Voth (2026)} for details.
 
 {phang}
 {opt seed(#)} specifies the random seed used for the simulation draws. The default is {opt seed(42)}.

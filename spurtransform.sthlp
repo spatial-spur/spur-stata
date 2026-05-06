@@ -33,7 +33,7 @@
 This command implements four spatial differencing transformations proposed by {help spurtest##mw2024:Müller and Watson (2024)} to eliminate unit roots in spatial processes. By default, it applies the LBM-GLS transformation, favoured by {help spurtest##mw2024:Müller and Watson (2024)}. Other transformations can be selected using the {opt transformation()} option.
 
 {pstd}
-{cmd:spurtransform} is part of a package of commands that also includes {cmd:spurtest} and {cmd:spurhalflife}. A practical guide to these methods is provided in a paper accompanying this implementation ({help spurtest##bbv2026:Becker et al. (2026)}), please cite this paper when using this code.
+{cmd:spurtransform} is part of a package of commands that also includes {cmd:spurtest} and {cmd:spurhalflife}. A practical guide to these methods is provided in a paper accompanying this implementation ({help spurtest##bbv2026:Becker, Boll and Voth (2026)}), please cite this paper when using this code.
 
 {pstd}
 Note: For this command (and all other commands in this package) to work, the spatial coordinates must be stored in the variables {it:s_*}, where * is a positive integer. This is for consistency with the {cmd:scpc} command developed by {help spurtest##mw2022:Müller and Watson (2022, 2023)} (available from Ulrich Müller's website), which this package is designed to work alongside. 
@@ -70,7 +70,7 @@ Note: This command and all others in this package rely on the {cmd: moremata} pa
 {opt transformation(lbmgls)} requests the LBM-GLS transformation, i.e. GLS transformation based on the covariance matrix of a Lévy-Brownian motion. This is the default option.
 
 {phang2}
-See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker et al. (2026)} for details.
+See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker, Boll and Voth (2026)} for details.
 
 {phang}
 {opt radius(#)} specifies the radius in metres (if {opt latlong}), or in the units of the original coordinates (if not {opt latlong}), which is to be used for isotropic differencing. Only allowed with {opt transformation(iso)}.
