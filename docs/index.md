@@ -16,7 +16,8 @@ Müller and Watson.
 
 ```stata
 ssc install moremata, replace
-net install spur, replace from(https://raw.githubusercontent.com/spatial-spur/spur-stata/v0.1.0b1/)
+net install spur, replace from(https://raw.githubusercontent.com/spatial-spur/spur-stata/v0.1.1/)
+net get spur, replace from(https://raw.githubusercontent.com/spatial-spur/spur-stata/v0.1.1/)
 
 cap ado uninstall scpc
 net install scpc, from("https://raw.githubusercontent.com/ukmueller/SCPC/master/src")

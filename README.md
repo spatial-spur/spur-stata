@@ -14,11 +14,11 @@ If you encounter any issues or have any questions, please open an issue on GitHu
 
 Installation from GitHub:
 
-    . net install spur, replace from(https://raw.githubusercontent.com/pdavidboll/spur/main/)
+    . net install spur, replace from(https://raw.githubusercontent.com/spatial-spur/spur-stata/v0.1.1/)
 
 If you *also* want to download the example data and do-file (will be saved to the current directory), run the following *in addition to the above*:
 
-    . net get spur, replace from(https://raw.githubusercontent.com/pdavidboll/spur/main/)
+    . net get spur, replace from(https://raw.githubusercontent.com/spatial-spur/spur-stata/v0.1.1/)
 
 Then, you can run the example do-file, which reproduces Table 1 from [Müller & Watson 2024](https://www.princeton.edu/~umueller/SPUR.pdf) based on the data from [Chetty et. al. (2014)](https://doi.org/10.1093/qje/qju022) (see [Becker, Boll and Voth 2026](https://pauldavidboll.com/SPUR_Stata_Journal_website.pdf) for details):
 
