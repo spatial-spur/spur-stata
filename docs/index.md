@@ -1,4 +1,10 @@
+<div class="package-overview-header" markdown="1">
+
 # spur-stata
+
+[GitHub repository](https://github.com/spatial-spur/spur-stata){ .md-button }
+
+</div>
 
 `spur-stata` implements the SPUR workflow for diagnosing and correcting
 spatial unit roots in cross-sectional regressions. It provides both a full OLS
