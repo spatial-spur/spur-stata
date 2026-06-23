@@ -4,7 +4,7 @@
 
 # `spur`: A Stata Package around Spatial Unit Roots
 
-This package implements methods for diagnosing and correcting spatial unit roots developed by Müller & Watson 2024. A practical guide to these methods and the Stata implementation can be found in [Becker, Boll and Voth 2026](https://pauldavidboll.com/SPUR_Stata_Journal_website.pdf).
+This package implements methods for diagnosing and correcting spatial unit roots developed by Müller & Watson 2024. A practical guide to these methods and the Stata implementation can be found in [Becker, Boll and Voth 2026](https://journals.sagepub.com/doi/10.1177/1536867X261449932).
 
 **Citation:** If you use this package, please cite Becker, Boll and Voth 2026 and Müller & Watson 2024. See [CITATION.bib](CITATION.bib) for the BibTeX entries.
 
@@ -20,7 +20,7 @@ If you *also* want to download the example data and do-file (will be saved to th
 
     . net get spur, replace from(https://raw.githubusercontent.com/spatial-spur/spur-stata/v0.1.1/)
 
-Then, you can run the example do-file, which reproduces Table 1 from [Müller & Watson 2024](https://www.princeton.edu/~umueller/SPUR.pdf) based on the data from [Chetty et. al. (2014)](https://doi.org/10.1093/qje/qju022) (see [Becker, Boll and Voth 2026](https://pauldavidboll.com/SPUR_Stata_Journal_website.pdf) for details):
+Then, you can run the example do-file, which reproduces Table 1 from [Müller & Watson 2024](https://www.princeton.edu/~umueller/SPUR.pdf) based on the data from [Chetty et. al. (2014)](https://doi.org/10.1093/qje/qju022) (see [Becker, Boll and Voth 2026](https://journals.sagepub.com/doi/10.1177/1536867X261449932) for details):
 
     . do example
 
@@ -42,11 +42,11 @@ spurtransform am, prefix("h_") latlong
 spurhalflife am, latlong                
 
 ```
-For details, see the help files, as well as [Becker, Boll and Voth 2026](https://pauldavidboll.com/SPUR_Stata_Journal_website.pdf).
+For details, see the help files, as well as [Becker, Boll and Voth 2026](https://journals.sagepub.com/doi/10.1177/1536867X261449932).
 
 ## References
 
-Becker, Sascha O., P. David Boll and Hans-Joachim Voth "Testing and Correcting for Spatial Unit Roots in Regression Analysis", The Stata Journal, forthcoming. https://pauldavidboll.com/SPUR_Stata_Journal_website.pdf.
+Becker, Sascha O., P. David Boll and Hans-Joachim Voth "Testing and Correcting for Spatial Unit Roots in Regression Analysis", The Stata Journal 26(2): 177–202. [https://doi.org/10.1177/1536867X261449932](https://journals.sagepub.com/doi/10.1177/1536867X261449932).
 
 Chetty, Raj, Nathaniel Hendren, Patrick Kline, Emmanuel Saez "Where is the land of Opportunity? The Geography of Intergenerational Mobility in the United States" , The Quarterly Journal of Economics 129(4) (2014), 1553–1623, https://doi.org/10.1093/qje/qju022
 
