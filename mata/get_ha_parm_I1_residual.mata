@@ -1,22 +1,22 @@
-*! version 1.0.0  21jan2025 pdavidboll
+*! version 1.0.1  26mar2026 pdavidboll
 version 14
 mata
 
 real scalar get_ha_parm_I1_residual(real matrix om_ho, real matrix distmat, real matrix R, real matrix e,  real matrix M) {
     // Variable declarations
     real scalar pow, ctry, c, pow50, c1, c2, ii
-    real matrix sigdm_c, om_c, om_c1, om_c2
+    real matrix om_c, om_c1, om_c2, RM
 
     // Initial values
     pow50 = 0.5
     pow = 1
     ctry = getcbar(0.95, distmat)  // Initial guess for c
+    RM = M * R
 
     // Step 1: Decrease `c` until `pow` is less than 0.5
     while (pow > pow50) {
         c = ctry
-        sigdm_c = get_sigma_residual(distmat, c, M)
-        om_c = R' * sigdm_c * R
+        om_c = cross(RM, exp(-c * distmat) * RM)
         pow = getpow_qf(om_ho, om_c, e)
         ctry = ctry / 2
     }
@@ -28,8 +28,7 @@ real scalar get_ha_parm_I1_residual(real matrix om_ho, real matrix distmat, real
     ctry = getcbar(0.01, distmat)  // Another initial guess for c
     while (pow < pow50) {
         c = ctry
-        sigdm_c = get_sigma_residual(distmat, c, M)
-        om_c = R' * sigdm_c * R
+        om_c = cross(RM, exp(-c * distmat) * RM)
         pow = getpow_qf(om_ho, om_c, e)
         ctry = 2 * ctry
     }
@@ -40,8 +39,7 @@ real scalar get_ha_parm_I1_residual(real matrix om_ho, real matrix distmat, real
     ii = 1
     while (abs(pow - pow50) > 0.01) {
         c = (c1 + c2) / 2
-        sigdm_c = get_sigma_residual(distmat, c, M)
-        om_c = R' * sigdm_c * R
+        om_c = cross(RM, exp(-c * distmat) * RM)
         pow = getpow_qf(om_ho, om_c, e)
       
         if (pow > pow50) {

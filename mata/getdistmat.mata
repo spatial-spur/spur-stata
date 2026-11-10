@@ -1,4 +1,4 @@
-*! version 1.0.0  21jan2025 pdavidboll
+*! version 1.0.1  26mar2026 pdavidboll
 version 14
 mata
 
@@ -8,21 +8,34 @@ real matrix getdistmat(real matrix s)
 {	
 	external real scalar latlongflag
 	real matrix mat
-	real scalar n,i,c
-	real matrix d
-	n=rows(s)
-	mat=J(n,n,0)
-	if(latlongflag==0){
-		for(i=1;i<=n;i++){
-			mat[.,i]=sqrt(rowsum((s:-s[i,.]):^2))
+	real scalar n, i, c, pi_const
+	real vector lat, lon, cos_lat, d1, d2, col
+	real matrix idx
+	
+	n = rows(s)
+	mat = J(n, n, 0)
+	
+	if (latlongflag == 0) {
+		for (i = 1; i < n; i++) {
+			idx = (i+1)..n
+			col = sqrt(rowsum((s[idx, .] :- s[i, .]):^2))
+			mat[idx, i] = col
+			mat[i, idx] = col'
 		}
 	}
-	else
-		{
-		c=3.14159265359/180
-		for(i=1;i<=n;i++){
-			d=(.5*c)*(s:-s[i,.])
-			mat[.,i]=asin(sqrt(sin(d[.,1]):^2  + cos(c*s[i,1])*(cos(c*s[.,1]):*(sin(d[.,2]):^2))))/3.14159265359
+	else {
+		c = 3.14159265359 / 180
+		pi_const = 3.14159265359
+		lat = c * s[., 1]
+		lon = c * s[., 2]
+		cos_lat = cos(lat)
+		for (i = 1; i < n; i++) {
+			idx = (i+1)..n
+			d1 = 0.5 * (lat[idx] :- lat[i])
+			d2 = 0.5 * (lon[idx] :- lon[i])
+			col = asin(sqrt(sin(d1):^2 + (cos_lat[i] * cos_lat[idx]) :* (sin(d2):^2))) / pi_const
+			mat[idx, i] = col
+			mat[i, idx] = col'
 		}
 	}	
 	return(mat)

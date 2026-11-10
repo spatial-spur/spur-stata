@@ -55,21 +55,15 @@ program spurtransform, sortpreserve
 	}
 	else {
 		marksample touse
+		if "`transformation'"=="cluster" {
+			qui replace `touse' = 0 if missing(`clustervar')
+		}
 	}
 	
-	tempvar touse2
-	
  	confirm name `prefix'
- 	foreach name of local varlist {
-		qui gen `touse2' = `touse'
-		if "`separately'"!="" {
-			qui replace `touse2' = 0 if missing(`name')
-		}
-		if "`transformation'"=="cluster" {
-			qui replace `touse2' = 0 if missing(`clustervar')
-		}
-		
-		
+	
+	// Check new variables can be created
+	foreach name of local varlist {
 		capture confirm new variable `prefix'`name'
         if _rc {
             if "`replace'"!="" {
@@ -80,22 +74,47 @@ program spurtransform, sortpreserve
                 exit 110
             }
         }
-		
-		
-	   mata: s = get_s_matrix("`touse2'", "`latlong'")
-	   
-	   if "`transformation'"=="cluster" {
-			mata: cluster = get_cluster_matrix("`clustervar'", "`touse2'")
-	   }
-	   else {
+	}
+	
+	if "`separately'" == "" {
+		// When transforming jointly, compute transformation matrix H once
+		mata: s = get_s_matrix("`touse'", "`latlong'")
+		if "`transformation'"=="cluster" {
+			mata: cluster = get_cluster_matrix("`clustervar'", "`touse'")
+		}
+		else {
 			mata: cluster = 0
-	   }
- 	   mata: H = make_transform(s, "`transformation'", `radius', cluster)
-	   mata: hy = transform("`name'", H, "`touse2'", "`transformation'")
-	   quietly mata: st_addvar("double", "`prefix'`name'")
-	   mata: st_store(., "`prefix'`name'", "`touse2'", hy)
-	   qui drop `touse2'
-     }
+		}
+		mata: H = make_transform(s, "`transformation'", `radius', cluster)
+		
+		foreach name of local varlist {
+			mata: hy = transform("`name'", H, "`touse'", "`transformation'")
+			quietly mata: st_addvar("double", "`prefix'`name'")
+			mata: st_store(., "`prefix'`name'", "`touse'", hy)
+		}
+	}
+	else {
+		tempvar touse2
+		foreach name of local varlist {
+			qui gen `touse2' = `touse'
+			qui replace `touse2' = 0 if missing(`name')
+			if "`transformation'"=="cluster" {
+				qui replace `touse2' = 0 if missing(`clustervar')
+			}
+			
+			mata: s = get_s_matrix("`touse2'", "`latlong'")
+			if "`transformation'"=="cluster" {
+				mata: cluster = get_cluster_matrix("`clustervar'", "`touse2'")
+			}
+			else {
+				mata: cluster = 0
+			}
+			mata: H = make_transform(s, "`transformation'", `radius', cluster)
+			mata: hy = transform("`name'", H, "`touse2'", "`transformation'")
+			quietly mata: st_addvar("double", "`prefix'`name'")
+			mata: st_store(., "`prefix'`name'", "`touse2'", hy)
+			qui drop `touse2'
+		}
+	}
 	
-	
-end	
+end

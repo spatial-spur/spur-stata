@@ -28,18 +28,24 @@ program define spurhalflife, rclass
 	
 	mata: y = st_data(., "`varlist'", "`touse'")
 	mata: s = get_s_matrix("`touse'", "`latlong'")
-	mata: distmat = getdistmat_normalized(s)
+	mata: distmat = getdistmat(s)
+	mata: max_dist_raw = max(distmat)
+	mata: distmat = distmat / max_dist_raw
 	mata: ci = spatial_persistence(y, distmat, emat, `level' / 100)
 	
-	
 	mata: st_numscalar("`ci_l'", ci.hl_ci_lower)
-    mata: st_numscalar("`ci_u'", ci.hl_ci_upper)
+	mata: st_numscalar("`ci_u'", ci.hl_ci_upper)
 	
 	if `ci_u' >= 100 {
 		local ci_u .
 	}
 	
-	mata: max_dist = max(getdistmat(s)) * 3.14159265359 * 6371000.009 * 2 // great circle distance
+	if "`latlong'" != "" {
+		mata: max_dist = max_dist_raw * 3.14159265359 * 6371000.009 * 2 // great circle distance
+	}
+	else {
+		mata: max_dist = max_dist_raw
+	}
 	mata: st_numscalar("`max_dist'", max_dist)
 	if "`normdist'" == "" {
 		local ci_l = `ci_l' * `max_dist' 

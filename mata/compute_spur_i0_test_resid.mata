@@ -1,4 +1,4 @@
-*! version 1.0.0  21jan2025 pdavidboll
+*! version 1.0.1  26mar2026 pdavidboll
 version 14
 mata 
 
@@ -17,7 +17,7 @@ struct struct_spatial_i0_test_residual scalar spatial_i0_test_residual(real matr
     // Declare all variables
     real scalar q, n, rho, n_y, rho_min, rho_max, n_rho
     real vector lam, rho_grid, sz_vec, cv_vec, LR, pvalue, cvalue
-    real matrix sigdm_bm, R, sigdm_rho, sigma, sigma_dm, sigdm_wn, om_rho, om_wn, om_bm
+    real matrix sigdm_bm, R, RM, sigdm_rho, sigma, sigma_dm, sigdm_wn, om_rho, om_wn, om_bm
     real matrix om_i0, om_ho, om_ha, ch_omi_ho, ch_omi_ha, ch_om_ho_mat, pvalue_mat, cvalue_mat, ch_om_ho
     real matrix X, P, y_P_ho, y_P_ha, q_P_ho, q_P_ha, y_ho, y_ho_ho, y_ho_ha, q_ho_ho, q_ho_ha, lr_ho, sigdm_ho
     real scalar ha_parm, c, i, ir, j
@@ -38,15 +38,13 @@ struct struct_spatial_i0_test_residual scalar spatial_i0_test_residual(real matr
 
     // Construct R .. eigenvectors for low-frequency weights
     R = get_R(sigdm_bm, q)
+    RM = M * R
 
     // Value of om_ho for rhobar = rhobar_max
     rho = 0.001
     c = getcbar(rho, distmat)
-    sigdm_rho = get_sigma_residual(distmat, c, M)
-
-    // Matrices used in analysis
-    om_rho = R' * sigdm_rho * R
-    om_bm = R' * sigdm_bm * R
+    om_rho = cross(RM, exp(-c * distmat) * RM)
+    om_bm = cross(RM, exp(-c_bm * distmat) * RM)
 
     // Find value of Ha parameter that yields (roughly 50% power)
     om_i0 = om_rho
@@ -82,8 +80,7 @@ struct struct_spatial_i0_test_residual scalar spatial_i0_test_residual(real matr
         rho = rho_grid[i]
         if (rho > 0) {
             c = getcbar(rho, distmat)
-            sigdm_ho = get_sigma_residual(distmat, c, M)
-            om_ho = R' * sigdm_ho * R
+            om_ho = cross(RM, exp(-c * distmat) * RM)
         }
 		asarray(ch_om_ho_mat, i, cholesky(om_ho)')
     }
@@ -114,7 +111,7 @@ struct struct_spatial_i0_test_residual scalar spatial_i0_test_residual(real matr
 	
 	
 	// Struct output
-     struct struct_spatial_i0_test scalar SP
+     struct struct_spatial_i0_test_residual scalar SP
      SP.LR = LR
      SP.pvalue = pvalue
      SP.cvalue = cvalue

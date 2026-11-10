@@ -1,4 +1,4 @@
-*! version 1.0.0  21jan2025 pdavidboll
+*! version 1.0.1  26mar2026 pdavidboll
 version 14
 mata
 
@@ -36,10 +36,9 @@ struct struct_spatial_i0_test scalar spatial_i0_test(real matrix Y, real matrix 
     // Value of om_ho for rhobar = rhobar_max
     rho = 0.001
     c = getcbar(rho, distmat)
-    sigdm_rho = get_sigma_dm(distmat, c)
+    om_rho = cross(R, exp(-c * distmat) * R)
 
     // Matrices used in analysis
-    om_rho = R' * sigdm_rho * R
     om_bm = R' * sigdm_bm * R
 
     // Find value of Ha parameter that yields (roughly 50% power)
@@ -76,8 +75,7 @@ struct struct_spatial_i0_test scalar spatial_i0_test(real matrix Y, real matrix 
         rho = rho_grid[i]
         if (rho > 0) {
             c = getcbar(rho, distmat)
-            sigdm_ho = get_sigma_dm(distmat, c)
-            om_ho = R' * sigdm_ho * R
+            om_ho = cross(R, exp(-c * distmat) * R)
         }
 		asarray(ch_om_ho_mat, i, cholesky(om_ho)')
     }

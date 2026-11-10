@@ -1,4 +1,4 @@
-*! version 1.0.0  21jan2025 pdavidboll
+*! version 1.0.1  26mar2026 pdavidboll
 version 14
 mata 
 
@@ -18,7 +18,6 @@ real matrix lbm_gls_matrix(real matrix s)
 	real matrix evec
 	real colvector ii
 	real colvector dsi
-	real matrix Dsi
 	real matrix LBMGLS_mat
 	real scalar small
 		
@@ -38,8 +37,7 @@ real matrix lbm_gls_matrix(real matrix s)
 	eval = select(eval, ii)
 	evec = select(evec, ii')
 	dsi = 1 :/ sqrt(eval)
-	Dsi = diag(dsi)
-	LBMGLS_mat = evec*Dsi*evec'
+	LBMGLS_mat = (evec :* dsi') * evec'
 	
 	return(LBMGLS_mat)
 }

@@ -1,25 +1,21 @@
-*! version 1.0.0  21jan2025 pdavidboll
+*! version 1.0.1  26mar2026 pdavidboll
 version 14
 mata
 
 real scalar getcbar(real scalar rhobar, real matrix distmat) {
-	real scalar c0
-	real scalar c1
-	real vector vd
-	real scalar v, i1
-	real scalar jj
-	real scalar cm, cbar
+	real scalar c0, c1, v, i1, jj, cm, cbar, n, denom
 	
 	c0 = 10
 	c1 = 10
-	vd = lvech(distmat)
+	n = rows(distmat)
+	denom = n * (n - 1)
 
     // Adjust c0 and c1 bounds so c0 yields v > rhobar and c1 yields v < rhobar
     i1 = 0
 	jj = 0
 
     while (i1 == 0) {
-        v = mean(exp(-c0 * vd))
+        v = (sum(exp(-c0 * distmat)) - n) / denom
         i1 = (v > rhobar)
       
         if (i1 == 0) {
@@ -36,7 +32,7 @@ real scalar getcbar(real scalar rhobar, real matrix distmat) {
     i1 = 0
     jj = 0
     while (i1 == 0) {
-        v = mean(exp(-c1 * vd))
+        v = (sum(exp(-c1 * distmat)) - n) / denom
         i1 = (v < rhobar)
       
         if (i1 == 0) {
@@ -55,7 +51,7 @@ real scalar getcbar(real scalar rhobar, real matrix distmat) {
     // Bisection determination of cbar
     while ((c1 - c0) > 0.001) {
         cm = sqrt(c0 * c1)
-        v = mean(exp(-cm * vd))
+        v = (sum(exp(-cm * distmat)) - n) / denom
       
         if (v < rhobar) {
             c1 = cm

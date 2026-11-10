@@ -1,4 +1,4 @@
-*! version 1.0.0  21jan2025 pdavidboll
+*! version 1.0.1  26mar2026 pdavidboll
 version 14
 mata
 
@@ -23,11 +23,6 @@ struct struct_spatial_i1_test scalar spatial_i1_test(real matrix Y, real matrix 
      n = rows(distmat)
      n_y = cols(Y)
 
-     // Identity and demeaned sigma
-//      sigma = I(n)
-//      sigma_dm = sigma - mean(sigma, 1) * J(1, n, 1)
-//      sigma_dm = sigma_dm - J(n, 1, 1) * mean(sigma_dm, 2)'
-
 	 // BM covariance matrix (demeaned)
      sigdm_bm = get_sigma_lbm_dm(distmat)
 
@@ -39,8 +34,7 @@ struct struct_spatial_i1_test scalar spatial_i1_test(real matrix Y, real matrix 
 
      // Determine Ha parameter that yields ~50% power
      ha_parm = get_ha_parm_I1(om_ho, distmat, R, emat)
-     sigdm_ha = get_sigma_dm(distmat, ha_parm)
-     om_ha = R' * sigdm_ha * R
+     om_ha = cross(R, exp(-ha_parm * distmat) * R)
 
      // Draws of LR under H0
      ch_om_ho = cholesky(om_ho)'
@@ -59,16 +53,20 @@ struct struct_spatial_i1_test scalar spatial_i1_test(real matrix Y, real matrix 
      sz_vec = (0.01, 0.05, 0.10)
      cv_vec = mm_quantile(lr_ho',1,(1 :- sz_vec'))
 
-     // Likelihood Ratio Test and p-values
+     // Realized value of LR
      LR = J(n_y, 1, .)
      pvalue = J(n_y, 1, .)
      for (i = 1; i <= n_y; i++) {
-         X = Y[., i] :- mean(Y[., i])
+         X = Y[,i] :- mean(Y[,i])
          P = R' * X
-         LR[i] = (P' * omi_ho * P) / (P' * omi_ha * P)
-         pvalue[i] = mean((lr_ho :> LR[i])')
+         y_ho_ho = ch_omi_ho * P
+         y_ho_ha = ch_omi_ha * P
+         q_ho_ho = colsum(y_ho_ho:^2)'
+         q_ho_ha = colsum(y_ho_ha:^2)'
+         LR[i] = q_ho_ho / q_ho_ha
+         pvalue[i] = mean(lr_ho' :> LR[i])
      }
-	 
+
      // Struct output
      struct struct_spatial_i1_test scalar SP
      SP.LR = LR

@@ -1,4 +1,4 @@
-*! version 1.0.0  21jan2025 pdavidboll
+*! version 1.0.1  26mar2026 pdavidboll
 version 14
 mata
 
@@ -13,7 +13,7 @@ struct struct_spatial_i1_test_residual {
 struct struct_spatial_i1_test_residual scalar spatial_i1_test_residual(real matrix Y, real matrix X_in, real matrix distmat, real matrix emat) {
     // Variable declarations
     real scalar q, n, n_y, ha_parm, i
-    real matrix sigma, sigma_dm, sigdm_bm, R, lam, om_ho, sigdm_ha, om_ha
+    real matrix sigma, sigma_dm, sigdm_bm, R, RM, lam, om_ho, sigdm_ha, om_ha
     real matrix ch_om_ho, omi_ho, omi_ha, ch_omi_ho, ch_omi_ha
     real matrix y_ho, y_ho_ho, y_ho_ha
     real vector q_ho_ho, q_ho_ha, lr_ho, sz_vec, cv_vec, LR, pvalue, X, P
@@ -28,21 +28,21 @@ struct struct_spatial_i1_test_residual scalar spatial_i1_test_residual(real matr
 	 // Form M
 	 M = I(n)-X_in*(invsym(X_in'*X_in))*X_in'
 
-	 // BM covariance matrix (approximation for demeanded value)
+	 // BM covariance matrix (approximation for demeaned value)
 	 rho_bm = 0.999
 	 c_bm = getcbar(rho_bm,distmat)
 	 sigdm_bm = get_sigma_residual(distmat,c_bm,M)
 
      // Construct eigenvectors R and low-frequency weights
      R = get_R(sigdm_bm, q)
+     RM = M * R
 
      // Calculate matrices used in analysis
-     om_ho = R' * sigdm_bm * R
+     om_ho = cross(RM, exp(-c_bm * distmat) * RM)
 
      // Determine Ha parameter that yields ~50% power
-     ha_parm = get_ha_parm_I1_residual(om_ho, distmat, R, emat, M)
-     sigdm_ha = get_sigma_residual(distmat, ha_parm, M)
-     om_ha = R' * sigdm_ha * R
+     ha_parm = get_ha_parm_I1_residual(om_ho, distmat, RM, emat, M)
+     om_ha = cross(RM, exp(-ha_parm * distmat) * RM)
 
      // Draws of LR under H0
      ch_om_ho = cholesky(om_ho)'
@@ -61,16 +61,20 @@ struct struct_spatial_i1_test_residual scalar spatial_i1_test_residual(real matr
      sz_vec = (0.01, 0.05, 0.10)
      cv_vec = mm_quantile(lr_ho',1,(1 :- sz_vec'))
 
-     // Likelihood Ratio Test and p-values
+     // Realized value of LR
      LR = J(n_y, 1, .)
      pvalue = J(n_y, 1, .)
      for (i = 1; i <= n_y; i++) {
-         X = Y[., i] :- mean(Y[., i])
+         X = Y[,i] :- mean(Y[,i])
          P = R' * X
-         LR[i] = (P' * omi_ho * P) / (P' * omi_ha * P)
-         pvalue[i] = mean((lr_ho :> LR[i])')
+         y_ho_ho = ch_omi_ho * P
+         y_ho_ha = ch_omi_ha * P
+         q_ho_ho = colsum(y_ho_ho:^2)'
+         q_ho_ha = colsum(y_ho_ha:^2)'
+         LR[i] = q_ho_ho / q_ho_ha
+         pvalue[i] = mean(lr_ho' :> LR[i])
      }
-	 
+
      // Struct output
      struct struct_spatial_i1_test_residual scalar SP
      SP.LR = LR
@@ -81,6 +85,4 @@ struct struct_spatial_i1_test_residual scalar spatial_i1_test_residual(real matr
      return(SP)
 }
 
-
 end
-

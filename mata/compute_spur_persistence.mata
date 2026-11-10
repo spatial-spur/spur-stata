@@ -1,4 +1,4 @@
-*! version 1.0.0  21jan2025 pdavidboll
+*! version 1.0.1  26mar2026 pdavidboll
 version 14
 mata
 
@@ -53,6 +53,7 @@ real matrix c_ci(real matrix Y, real matrix distmat, real matrix emat,
     real matrix ch_omi_mat_ha, const_den_mat_ha
     real matrix sz_vec, cv_mat, pv_mat, X, den_ho_X_mat, den_ha_avg_X_mat
     real matrix e, xc, Xc, den_ho, den_ha_mat, den_ha_mat_X, lr, cvalue
+	real matrix ch_null, ch_omi, den_ha_avg
 
     // Initialization
     q = rows(emat)
@@ -76,9 +77,7 @@ real matrix c_ci(real matrix Y, real matrix distmat, real matrix emat,
 
     for (i = 1; i <= n_c_ho; i++) {
         c = c_grid_ho[i]
-        //om = I(q)
-        sigdm = get_sigma_dm(distmat, c)
-        om = R' * sigdm * R
+        om = cross(R, exp(-c * distmat) * R)
 		asarray(ch_om_mat, i, cholesky(om)')
         omi = invsym(om)
 		asarray(ch_omi_mat, i, cholesky(omi)')
@@ -91,9 +90,7 @@ real matrix c_ci(real matrix Y, real matrix distmat, real matrix emat,
 
     for (i = 1; i <= n_c_ha; i++) {
         c = c_grid_ha[i]
-        //om = I(q)
-        sigdm = get_sigma_dm(distmat, c)
-        om = R' * sigdm * R
+        om = cross(R, exp(-c * distmat) * R)
         omi = invsym(om)
 		asarray(ch_omi_mat_ha, i, cholesky(omi)')
         const_den_mat_ha[i,1] = sqrt(det(omi)) * 0.5 * gamma(q / 2) / (pi()^(q / 2))
@@ -107,6 +104,16 @@ real matrix c_ci(real matrix Y, real matrix distmat, real matrix emat,
     den_ho_X_mat = J(n_c_ho, 1, .)
     den_ha_avg_X_mat = J(n_c_ho, 1, .)
 
+    // Precompute alternative density for data once (invariant across null grid)
+    den_ha_mat_X = J(n_c_ha, 1, .)
+    for (j = 1; j <= n_c_ha; j++) {
+        ch_omi = asarray(ch_omi_mat_ha, j)
+        const_den = const_den_mat_ha[j, 1]
+        Xc = ch_omi * X
+        den_ha_mat_X[j, 1] = const_den * ((colsum(Xc:^2)) :^ (-q / 2))
+    }
+    den_ha_avg_X = mean(den_ha_mat_X)'
+
     for (i = 1; i <= n_c_ho; i++) {
 		ch_null = asarray(ch_om_mat,i)
         e = ch_null' * emat
@@ -116,37 +123,28 @@ real matrix c_ci(real matrix Y, real matrix distmat, real matrix emat,
         den_ho = const_den * ((colsum(xc:^2)) :^ (-q / 2))'
         den_ha_mat = J(cols(emat), n_c_ha, .)
 		
-        // Compute for data
+        // Compute for data under H0
         Xc = ch_omi * X
         den_ho_X = const_den * ((colsum(Xc:^2)) :^ (-q / 2))'
-        den_ha_mat_X = J(n_c_ha, 1, .)
 
         for (j = 1; j <= n_c_ha; j++) {
 			ch_omi = asarray(ch_omi_mat_ha,j)
             const_den = const_den_mat_ha[j,1]
             xc = ch_omi * e
             den_ha_mat[.,j] = const_den * ((colsum(xc:^2)) :^ (-q / 2))'
-            Xc = ch_omi * X
-            den_ha_mat_X[j,1] = const_den * ((colsum(Xc:^2)) :^ (-q / 2))
         }
 	
         den_ha_avg = mean(den_ha_mat')'
         lr = den_ha_avg :/ den_ho
 		cvalue = mm_quantile(lr,1, (1 :- sz_vec'))
         cv_mat[.,i] = cvalue
-        den_ha_avg_X = mean(den_ha_mat_X)'
         lr_X = den_ha_avg_X / den_ho_X
         pv_mat[i,1] = mean(lr :> lr_X)
         den_ha_avg_X_mat[i,1] = den_ha_avg_X
         den_ho_X_mat[i,1] = den_ho_X
-		
-		
     }
 
     return(pv_mat)
 }
-
-
-
 
 end
