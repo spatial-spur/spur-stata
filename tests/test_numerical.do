@@ -19,3 +19,6 @@ sv2_latlongflag = 1
 D = sv2_getdistmat((35.123, 45.987 \ -35.123, -134.013))
 assert(abs(D[1,2] - 0.5) < 1e-8)
 end
+
+capture mata: sv2_get_ha_parm_I0(I(3), I(3), I(3), J(3, 100, 1))
+assert _rc == 3498
