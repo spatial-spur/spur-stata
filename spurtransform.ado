@@ -1,10 +1,11 @@
 *! version 1.0.1  26mar2026 pdavidboll
 mata mata set matastrict on
 
-program spurtransform, sortpreserve 
+program spurtransform, sortpreserve
     version 14
- 	syntax varlist(numeric) [if] [in] , PREfix(string) [ transformation(string) radius(real -1) clustvar(varname) latlong Replace separately] 
-	
+    spur_mata
+	syntax varlist(numeric) [if] [in] , PREfix(string) [ transformation(string) radius(real -1) clustvar(varname) latlong Replace separately]
+
 	// check moremata installed
 	cap which moremata.hlp
 	if _rc {
@@ -12,22 +13,22 @@ program spurtransform, sortpreserve
         `"you can do so by clicking this link: {stata "ssc install moremata, replace":auto-install moremata}"'
 		exit 199
 	}
-	
+
 	// check correct specification of options
 	if "`transformation'"=="" {
 		local transformation "lbmgls"
 	}
-	
+
 	if "`transformation'"!="iso" & `radius'!=-1 {
 		di as error "Option radius only allowed with transformation(iso)."
 		exit
 	}
-	
+
 	if "`transformation'"=="iso" & `radius'==-1 {
 		di as error "Radius missing."
 		exit
 	}
-	
+
 	if "`transformation'"=="iso" & `radius'<=0 {
 		di as error "Radius must be positive."
 		exit
@@ -37,18 +38,18 @@ program spurtransform, sortpreserve
 		di as error "Option clustvar only allowed with transformation(cluster)."
 		exit
 	}
-	
+
 	if "`transformation'"=="cluster" & "`clustvar'"=="" {
 		di as error "Clustvar missing."
 		exit
 	}
-	
+
 	// make numeric clustervar
 	tempvar clustervar
 	if "`transformation'"=="cluster" & "`clustvar'"!="" {
 		qui egen `clustervar' = group(`clustvar')
 	}
-	
+
 	// select sample
 	if "`separately'"!="" {
 		marksample touse, novarlist
@@ -59,9 +60,9 @@ program spurtransform, sortpreserve
 			qui replace `touse' = 0 if missing(`clustervar')
 		}
 	}
-	
+
  	confirm name `prefix'
-	
+
 	// Check new variables can be created
 	foreach name of local varlist {
 		capture confirm new variable `prefix'`name'
@@ -75,20 +76,20 @@ program spurtransform, sortpreserve
             }
         }
 	}
-	
+
 	if "`separately'" == "" {
 		// When transforming jointly, compute transformation matrix H once
-		mata: s = get_s_matrix("`touse'", "`latlong'")
+		mata: s = sv2_get_s_matrix("`touse'", "`latlong'")
 		if "`transformation'"=="cluster" {
-			mata: cluster = get_cluster_matrix("`clustervar'", "`touse'")
+			mata: cluster = sv2_get_cluster_matrix("`clustervar'", "`touse'")
 		}
 		else {
 			mata: cluster = 0
 		}
-		mata: H = make_transform(s, "`transformation'", `radius', cluster)
-		
+		mata: H = sv2_make_transform(s, "`transformation'", `radius', cluster)
+
 		foreach name of local varlist {
-			mata: hy = transform("`name'", H, "`touse'", "`transformation'")
+			mata: hy = sv2_transform("`name'", H, "`touse'", "`transformation'")
 			quietly mata: st_addvar("double", "`prefix'`name'")
 			mata: st_store(., "`prefix'`name'", "`touse'", hy)
 		}
@@ -101,20 +102,20 @@ program spurtransform, sortpreserve
 			if "`transformation'"=="cluster" {
 				qui replace `touse2' = 0 if missing(`clustervar')
 			}
-			
-			mata: s = get_s_matrix("`touse2'", "`latlong'")
+
+			mata: s = sv2_get_s_matrix("`touse2'", "`latlong'")
 			if "`transformation'"=="cluster" {
-				mata: cluster = get_cluster_matrix("`clustervar'", "`touse2'")
+				mata: cluster = sv2_get_cluster_matrix("`clustervar'", "`touse2'")
 			}
 			else {
 				mata: cluster = 0
 			}
-			mata: H = make_transform(s, "`transformation'", `radius', cluster)
-			mata: hy = transform("`name'", H, "`touse2'", "`transformation'")
+			mata: H = sv2_make_transform(s, "`transformation'", `radius', cluster)
+			mata: hy = sv2_transform("`name'", H, "`touse2'", "`transformation'")
 			quietly mata: st_addvar("double", "`prefix'`name'")
 			mata: st_store(., "`prefix'`name'", "`touse2'", hy)
 			qui drop `touse2'
 		}
 	}
-	
+
 end

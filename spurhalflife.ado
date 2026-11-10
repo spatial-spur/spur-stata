@@ -3,9 +3,15 @@ mata mata set matastrict on
 
 program define spurhalflife, rclass
 	version 14
+	spur_mata
 	syntax varname(numeric) [if] [in] , [q(int 15) nrep(int 100000) seed(int 42) Level(real 95) latlong NORMdist]
+
+    if `q' < 2 | `nrep' < 1 {
+        display as error "q must be at least two and nrep must be positive"
+        exit 198
+    }
 	marksample touse
-	
+
 	// check moremata installed
 	cap which moremata.hlp
 	if _rc {
@@ -13,33 +19,34 @@ program define spurhalflife, rclass
         `"you can do so by clicking this link: {stata "ssc install moremata, replace":auto-install moremata}"'
 		exit 199
 	}
-	
+
 	tempname ci_l ci_u max_dist
-	
+
 	if `level' >= 100 | `level' <= 0 {
 		di as error "Invalid level."
 		exit
 	}
-		
+
 	mata: q = `q'
 	mata: nrep = `nrep'
 	set seed `seed'
 	mata: emat = rnormal(q, nrep, 0, 1)
-	
+
 	mata: y = st_data(., "`varlist'", "`touse'")
-	mata: s = get_s_matrix("`touse'", "`latlong'")
-	mata: distmat = getdistmat(s)
+	mata: s = sv2_get_s_matrix("`touse'", "`latlong'")
+	mata: distmat = sv2_getdistmat(s)
 	mata: max_dist_raw = max(distmat)
+	mata: if (max_dist_raw <= 0 | max_dist_raw >= .) _error(3498)
 	mata: distmat = distmat / max_dist_raw
-	mata: ci = spatial_persistence(y, distmat, emat, `level' / 100)
-	
+	mata: ci = sv2_spatial_persistence(y, distmat, emat, `level' / 100)
+
 	mata: st_numscalar("`ci_l'", ci.hl_ci_lower)
 	mata: st_numscalar("`ci_u'", ci.hl_ci_upper)
-	
+
 	if `ci_u' >= 100 {
 		local ci_u .
 	}
-	
+
 	if "`latlong'" != "" {
 		mata: max_dist = max_dist_raw * 3.14159265359 * 6371000.009 * 2 // great circle distance
 	}
@@ -48,14 +55,14 @@ program define spurhalflife, rclass
 	}
 	mata: st_numscalar("`max_dist'", max_dist)
 	if "`normdist'" == "" {
-		local ci_l = `ci_l' * `max_dist' 
+		local ci_l = `ci_l' * `max_dist'
 		local ci_u = `ci_u' * `max_dist'
 	}
-	
+
 	return scalar ci_l=`ci_l'
 	return scalar ci_u=`ci_u'
 	return scalar max_dist = `max_dist'
-	
+
 	// Display results
 	if "`normdist'"!=""{
 		local units : di "fractions of maximum distance " %9.4f `max_dist'
@@ -75,8 +82,8 @@ program define spurhalflife, rclass
 		di as result "Upper bound: " %9.4f `ci_u'
 	}
     else {
-		di as result "Upper bound:    inf" 
+		di as result "Upper bound:    inf"
 	}
     di as result "---------------------------------------"
-	
+
 end

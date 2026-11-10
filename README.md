@@ -51,3 +51,10 @@ Becker, Sascha O., P. David Boll and Hans-Joachim Voth "Testing and Correcting f
 Chetty, Raj, Nathaniel Hendren, Patrick Kline, Emmanuel Saez "Where is the land of Opportunity? The Geography of Intergenerational Mobility in the United States" , The Quarterly Journal of Economics 129(4) (2014), 1553–1623, https://doi.org/10.1093/qje/qju022
 
 Müller, Ulrich K. and Mark W. Watson "Spatial Unit Roots and Spurious Regression", Econometrica 92(5) (2024), 1661–1695. https://www.princeton.edu/~umueller/SPUR.pdf.
+
+
+## Development correctness changes
+
+This branch loads a namespaced Mata source bundle once per Stata session. Regenerate it with `python tools/build_mata_bundle.py` after editing `mata/*.mata`; the installer no longer selects the legacy `lspur.mlib`. This also prevents SCPC and SPUR helpers with common names from overwriting one another.
+
+The audit fixes covariance-rank handling, an extra residual projection, parameter calibration, and half-life scaling. Persistence calculations remove unused quantiles and transposes and pre-multiply small transformation matrices. Statistical acceptance is based on the defining equations and invariance properties, rather than exact upstream output. Licensed Stata is required to execute the supplied numerical checks.

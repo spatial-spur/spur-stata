@@ -5,16 +5,16 @@ mata
 real matrix getdistmat(real matrix s)
 // computes matrix of distances from locations
 // if external latlongflag=0, distances computed as norm, otherwise latitude / longitude and haversine formula for sphere with radius 1/Pi
-{	
+{
 	external real scalar latlongflag
 	real matrix mat
 	real scalar n, i, c, pi_const
-	real vector lat, lon, cos_lat, d1, d2, col
+	real vector lat, lon, cos_lat, d1, d2, col, h
 	real matrix idx
-	
+
 	n = rows(s)
 	mat = J(n, n, 0)
-	
+
 	if (latlongflag == 0) {
 		for (i = 1; i < n; i++) {
 			idx = (i+1)..n
@@ -33,12 +33,15 @@ real matrix getdistmat(real matrix s)
 			idx = (i+1)..n
 			d1 = 0.5 * (lat[idx] :- lat[i])
 			d2 = 0.5 * (lon[idx] :- lon[i])
-			col = asin(sqrt(sin(d1):^2 + (cos_lat[i] * cos_lat[idx]) :* (sin(d2):^2))) / pi_const
+			h = sin(d1):^2 + (cos_lat[i] * cos_lat[idx]) :* (sin(d2):^2)
+            h = h :* (h :> 0)
+            h = h :* (h :<= 1) :+ (h :> 1)
+            col = asin(sqrt(h)) / pi_const
 			mat[idx, i] = col
 			mat[i, idx] = col'
 		}
-	}	
+	}
 	return(mat)
-}	
+}
 
 end

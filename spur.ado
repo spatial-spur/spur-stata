@@ -1,6 +1,7 @@
 *! version 1.0.0  23apr2026 DGoettlich
 program define spur, rclass sortpreserve
 	version 14
+	spur_mata
 
 	syntax varlist(numeric min=2) [if] [in], ///
 		[ ///
@@ -13,6 +14,11 @@ program define spur, rclass sortpreserve
 			cvs ///
 			Replace ///
 		]
+
+    if `q' < 2 | `nrep' < 1 {
+        display as error "q must be at least two and nrep must be positive"
+        exit 198
+    }
 
 	// check moremata installed
 	cap which moremata.hlp

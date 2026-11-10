@@ -1,28 +1,22 @@
-*! version 1.0.1  26mar2026 pdavidboll
+*! version 1.0.2  10nov2026
 version 14
 mata
 
 real matrix get_R(real matrix sig, real scalar qmax)
 {
-
-	real matrix V, R
-	real colvector d, ds
-	real colvector ii
-	
-	symeigensystem(sig, V, d)
-	d = d'
-	
-	ii = order(d,-1)
-	d = d[ii]
-	V = V[.,ii]
-	
-	qmax = min((rows(sig) - 1, qmax))
-	if (qmax < 1) qmax = 1
-	
-	ds = d[1..qmax]
-	R = V[., 1..qmax]
-	
-	return(R)
+    real matrix V
+    real rowvector evals
+    real colvector d, ii
+    if (qmax < 1 | qmax != floor(qmax) | qmax >= rows(sig)) _error(3498)
+    symeigensystem(sig, V, evals)
+    d = evals'
+    ii = order(d, -1)
+    d = d[ii]
+    if (d[qmax] <= max(abs(d)) * 1e-10) {
+        errprintf("q exceeds the positive rank of the spatial covariance.\n")
+        _error(3498)
+    }
+    return(V[., ii[1..qmax]])
 }
 
 end

@@ -19,13 +19,14 @@ struct struct_spatial_i0_test scalar spatial_i0_test(real matrix Y, real matrix 
     real scalar q, n, rho, n_y, rho_min, rho_max, n_rho
     real vector lam, rho_grid, sz_vec, cv_vec, LR, pvalue, cvalue
     real matrix sigdm_bm, R, sigdm_rho, sigma, sigma_dm, sigdm_wn, om_rho, om_wn, om_bm
-    real matrix om_i0, om_ho, om_ha, ch_omi_ho, ch_omi_ha, ch_om_ho_mat, pvalue_mat, cvalue_mat, ch_om_ho
+    real matrix om_i0, om_ho, om_ha, ch_omi_ho, ch_omi_ha, pvalue_mat, cvalue_mat, ch_om_ho
+    transmorphic scalar ch_om_ho_mat
     real matrix X, P, y_P_ho, y_P_ha, q_P_ho, q_P_ha, y_ho, y_ho_ho, y_ho_ha, q_ho_ho, q_ho_ha, lr_ho, sigdm_ho
     real scalar ha_parm, c, i, ir, j
 
     q = rows(emat)
     n = rows(distmat)
-	
+
 
     // BM covariance matrix (approximation for demeaned value)
     sigdm_bm = get_sigma_lbm_dm(distmat)
@@ -98,13 +99,13 @@ struct struct_spatial_i0_test scalar spatial_i0_test(real matrix Y, real matrix 
             pvalue_mat[ir,j] = mean(lr_ho' :> LR[j])
         }
     }
-	
+
 
     cvalue = colmax(cvalue_mat)'
     pvalue = colmax(pvalue_mat)'
 
-	
-	
+
+
 	// Struct output
      struct struct_spatial_i0_test scalar SP
      SP.LR = LR

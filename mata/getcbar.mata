@@ -1,67 +1,45 @@
-*! version 1.0.1  26mar2026 pdavidboll
+*! version 1.0.2 10nov2026
 version 14
 mata
 
-real scalar getcbar(real scalar rhobar, real matrix distmat) {
-	real scalar c0, c1, v, i1, jj, cm, cbar, n, denom
-	
-	c0 = 10
-	c1 = 10
-	n = rows(distmat)
-	denom = n * (n - 1)
-
-    // Adjust c0 and c1 bounds so c0 yields v > rhobar and c1 yields v < rhobar
-    i1 = 0
-	jj = 0
-
-    while (i1 == 0) {
-        v = (sum(exp(-c0 * distmat)) - n) / denom
-        i1 = (v > rhobar)
-      
-        if (i1 == 0) {
-            c1 = c0
-            c0 = c0 / 2
-            jj = jj + 1
-        }
-        if (jj > 500) {
-            _error("rhobar too large")
-        }
-    }
-
-    // Verify that c1 yields a value less than rhobar
-    i1 = 0
-    jj = 0
-    while (i1 == 0) {
-        v = (sum(exp(-c1 * distmat)) - n) / denom
-        i1 = (v < rhobar)
-      
-        if (i1 == 0) {
-            c0 = c1
-            c1 = 2 * c1
-            jj = jj + 1
-        }
-        if (c1 > 10000) {
-            i1 = 1
-        }
-        if (jj > 500) {
-            _error("rhobar too small")
-        }
-    }
-
-    // Bisection determination of cbar
-    while ((c1 - c0) > 0.001) {
-        cm = sqrt(c0 * c1)
-        v = (sum(exp(-cm * distmat)) - n) / denom
-      
-        if (v < rhobar) {
-            c1 = cm
-        } else {
-            c0 = cm
-        }
-    }
-
-    cbar = sqrt(c0 * c1)
-    return(cbar)
+real scalar getcbar(real scalar avc0, real matrix distmat)
+{
+	real scalar denom
+	real scalar dbar, floor_corr, lo, hi, c, f, slope, candidate, iter
+	real matrix E
+	real vector d
+	d = lvech(distmat)
+	denom = length(d)
+	dbar = mean(d)
+	floor_corr = mean(d :== 0)
+	if (dbar <= 0 | dbar >= . | avc0 <= floor_corr | avc0 >= 1) {
+		errprintf("Average correlation is unattainable for these locations.\n")
+		_error(3498)
+	}
+	lo = 0
+	hi = -log(avc0) / dbar
+	for (iter = 1; iter <= 1024; iter++) {
+		E = exp(-hi * d)
+		if (mean(E) <= avc0) break
+		lo = hi
+		hi = 2 * hi
+		if (hi >= .) _error(3498)
+	}
+	c = hi
+	for (iter = 1; iter <= 100; iter++) {
+		E = exp(-c * d)
+		f = mean(E) - avc0
+		if (abs(f) <= 1e-10 * avc0) return(c)
+		if (f > 0) lo = c
+		else hi = c
+		slope = -mean(d :* E)
+		candidate = c - f / slope
+		if (candidate <= lo | candidate >= hi | candidate >= .) candidate = (lo + hi) / 2
+		c = candidate
+	}
+	errprintf("Spatial scale solver did not converge.\n")
+	_error(3498)
+	return(.)
 }
 
 end

@@ -24,7 +24,7 @@ struct struct_spatial_i1_test_residual scalar spatial_i1_test_residual(real matr
      q = rows(emat)
      n = rows(distmat)
      n_y = cols(Y)
-	 
+
 	 // Form M
 	 M = I(n)-X_in*(invsym(X_in'*X_in))*X_in'
 
@@ -41,7 +41,7 @@ struct struct_spatial_i1_test_residual scalar spatial_i1_test_residual(real matr
      om_ho = cross(RM, exp(-c_bm * distmat) * RM)
 
      // Determine Ha parameter that yields ~50% power
-     ha_parm = get_ha_parm_I1_residual(om_ho, distmat, RM, emat, M)
+     ha_parm = get_ha_parm_I1_residual(om_ho, distmat, R, emat, M)
      om_ha = cross(RM, exp(-ha_parm * distmat) * RM)
 
      // Draws of LR under H0
