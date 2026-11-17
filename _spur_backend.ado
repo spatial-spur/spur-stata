@@ -29,7 +29,7 @@ program define _spur_backend, rclass
 
         local plugin_ok 0
         if "`req_backend'" != "fallback" {
-            capture plugin call _spur_rust_plugin, ping_spur_v1
+            capture plugin call _spur_rust_plugin, ping_spur_v2
             if _rc == 0 {
                 local plugin_ok 1
             }
@@ -44,13 +44,13 @@ program define _spur_backend, rclass
                         }
                     }
                 }
-                capture plugin call _spur_rust_plugin, ping_spur_v1
+                capture plugin call _spur_rust_plugin, ping_spur_v2
                 if _rc == 0 {
                     local plugin_ok 1
                 }
             }
             if "`req_backend'" == "rust" & `plugin_ok' == 0 {
-                di as error "compatible spur_rust.plugin (v1) could not be loaded for backend(rust)"
+                di as error "compatible spur_rust.plugin (v2) could not be loaded for backend(rust)"
                 exit 199
             }
         }
@@ -175,8 +175,8 @@ program define _spur_backend, rclass
         syntax , flavor(string) yvar(string) touse(varname) q(integer) nrep(integer) seed(integer) ///
             [xvars(string) latlong BACKend(string) nthreads(integer -1)]
 
-        if `q' < 1 {
-            di as error "q() must be at least 1"
+        if `q' < 2 {
+            di as error "q() must be at least 2 for SPUR inference"
             exit 198
         }
         if `nrep' < 1 {
@@ -342,7 +342,12 @@ program define _spur_backend, rclass
             mata: _sp_t_r = spatial_persistence(_sp_t_y, _sp_t_d, _sp_t_e, `level' / 100)
             mata: st_numscalar("`cil'", _sp_t_r.hl_ci_lower)
             mata: st_numscalar("`ciu'", _sp_t_r.hl_ci_upper)
-            mata: st_numscalar("`maxdist'", max(getdistmat(_sp_t_s)) * 3.14159265359 * 6371000.009 * 2)
+            if "`latlong'" != "" {
+                mata: st_numscalar("`maxdist'", max(getdistmat(_sp_t_s)) * 3.14159265359 * 6371000.009 * 2)
+            }
+            else {
+                mata: st_numscalar("`maxdist'", max(getdistmat(_sp_t_s)))
+            }
         }
         local rc = _rc
         capture mata: mata drop _sp_t_e _sp_t_y _sp_t_s _sp_t_d _sp_t_r

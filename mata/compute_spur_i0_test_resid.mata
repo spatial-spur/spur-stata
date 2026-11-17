@@ -21,15 +21,54 @@ struct struct_spatial_i0_test_residual scalar spatial_i0_test_residual(real matr
     real matrix om_i0, om_ho, om_ha, ch_omi_ho, ch_omi_ha, ch_om_ho_mat, pvalue_mat, cvalue_mat, ch_om_ho
     real matrix X, P, y_P_ho, y_P_ha, q_P_ho, q_P_ha, y_ho, y_ho_ho, y_ho_ha, q_ho_ho, q_ho_ha, lr_ho, sigdm_ho
     real scalar ha_parm, c, i, ir, j
-	real matrix M
-	real scalar rho_bm, c_bm
+    real matrix M, Qx
+    real colvector colj, col_s
+    real scalar rho_bm, c_bm, k_x, pass, prev, max_abs, snorm, cnorm
 	
 
     q = rows(emat)
     n = rows(distmat)
 	
-	// Form M
-	M = I(n)-X_in*(invsym(X_in'*X_in))*X_in'
+	// Column-normalized MGS with reorthogonalization (invariant to regressor units)
+	k_x = cols(X_in)
+	if (k_x == 0 | k_x >= n) {
+		errprintf("invalid residual test design matrix dimensions\n")
+		exit(198)
+	}
+	Qx = J(n, k_x, 0)
+	for (j = 1; j <= k_x; j++) {
+		colj = X_in[., j]
+		max_abs = max(abs(colj))
+		if (max_abs == 0 | max_abs >= .) {
+			errprintf("design matrix is rank-deficient; residual tests require full column rank\n")
+			exit(198)
+		}
+		col_s = colj :/ max_abs
+		snorm = sqrt(colsum(col_s :^ 2))
+		if (snorm == 0 | snorm >= .) {
+			errprintf("design matrix is rank-deficient; residual tests require full column rank\n")
+			exit(198)
+		}
+		Qx[., j] = col_s :/ snorm
+	}
+	for (j = 1; j <= k_x; j++) {
+		for (pass = 1; pass <= 2; pass++) {
+			for (prev = 1; prev < j; prev++) {
+				Qx[., j] = Qx[., j] - Qx[., prev] * (Qx[., prev]' * Qx[., j])
+			}
+		}
+		cnorm = sqrt(colsum(Qx[., j] :^ 2))
+		if (cnorm >= . | cnorm <= 1e-10) {
+			errprintf("design matrix is rank-deficient; residual tests require full column rank\n")
+			exit(198)
+		}
+		Qx[., j] = Qx[., j] :/ cnorm
+	}
+	if (q > n - k_x) {
+		errprintf("q cannot exceed residual degrees of freedom (n - rank(X))\n")
+		exit(198)
+	}
+	M = I(n) - Qx * Qx'
 	
 	// BM covariance matrix (approximation for demeanded value)
 	rho_bm = 0.999
@@ -48,6 +87,11 @@ struct struct_spatial_i0_test_residual scalar spatial_i0_test_residual(real matr
     om_rho = R' * sigdm_rho * R
     om_bm = R' * sigdm_bm * R
 
+    if (spur_shape_equal(om_rho, om_bm)) {
+        errprintf("SPUR covariance shapes are uninformative\n")
+        exit(198)
+    }
+
     // Find value of Ha parameter that yields (roughly 50% power)
     om_i0 = om_rho
     om_ho = om_rho
@@ -62,8 +106,17 @@ struct struct_spatial_i0_test_residual scalar spatial_i0_test_residual(real matr
     n_y = cols(Y)
     LR = J(n_y, 1, .)
     for (i = 1; i <= n_y; i++) {
+        if (max(Y[,i]) - min(Y[,i]) == 0) {
+            errprintf("response Y is constant; SPUR inference requires variation in Y\n")
+            exit(198)
+        }
         X = Y[,i] :- mean(Y[,i])
+        X = X :/ max(abs(X))
         P = R' * X
+        if (norm(P) == 0 | norm(P) <= 1e-12 * norm(X)) {
+            errprintf("projected SPUR vector has zero norm\n")
+            exit(198)
+        }
         y_P_ho = ch_omi_ho * P
         y_P_ha = ch_omi_ha * P
         q_P_ho = colsum(y_P_ho:^2)'
@@ -100,7 +153,7 @@ struct struct_spatial_i0_test_residual scalar spatial_i0_test_residual(real matr
         q_ho_ho = colsum(y_ho_ho:^2)
         q_ho_ha = colsum(y_ho_ha:^2)
         lr_ho = q_ho_ho :/ q_ho_ha
-        cv_vec = mm_quantile(lr_ho',1, (1 :- sz_vec'))
+        cv_vec = spur_quantile(lr_ho', (1 :- sz_vec'))
         cvalue_mat[ir,] = cv_vec'
         for (j = 1; j <= n_y; j++) {
             pvalue_mat[ir,j] = mean(lr_ho' :> LR[j])

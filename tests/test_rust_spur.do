@@ -186,7 +186,8 @@ void _test_verify_canon_halflife(
     emat_al = sg :* emat
 
     ci = spatial_persistence(y, distmat, emat_al, level / 100)
-    md = max(getdistmat(s)) * 3.14159265359 * 6371000.009 * 2
+    md = max(getdistmat(s))
+    if (latlong != "") md = md * 3.14159265359 * 6371000.009 * 2
     assert(abs(md - rust_md) < 1e-6)
     cil = ci.hl_ci_lower
     ciu = ci.hl_ci_upper
@@ -247,12 +248,15 @@ foreach flavor in i0 i1 i0resid i1resid {
     matrix r_cv = r(cv)
 
     set seed 42
-    // cv uses Hyndman-Fan type 7 in Rust vs mm_quantile def 2 in Mata (O(1/nrep) tail spacing)
+    // Both paths use the same type-7 simulation quantiles.
     mata: _test_verify_canon_test("`flavor'", "y", "`xrest'", "_all_one", "latlong", 12, 401, `r_p', `r_stat', `r_ha', "r_cv", 0.05)
 
-    // Public fallback also runs cleanly without altering user Mata globals
+    // Ordinary same-seed public calls must agree without altering simulation draws.
     spurtest `flavor' `vlist', q(12) nrep(401) seed(42) latlong backend(fallback)
     assert "`r(backend)'" == "fallback"
+    assert abs(r(p) - `r_p') < 1e-10
+    assert abs(r(teststat) - `r_stat') < 1e-10 * max(1, abs(`r_stat'))
+    assert abs(r(ha_param) - `r_ha') < 1e-8
 }
 
 // Verify tight cv convergence between def 7 (Rust) and def 2 (Mata) at large nrep=20000
@@ -264,8 +268,8 @@ matrix r_cv = r(cv)
 set seed 42
 mata: _test_verify_canon_test("i0", "y", "", "_all_one", "latlong", 15, 20000, `r_p', `r_stat', `r_ha', "r_cv", 1e-3)
 
-// Also test public fallback == rust at default nrep=100000 for i0 (where eigensigns don't shift ha bin)
-spurtest i0 y, q(15) nrep(100000) seed(42) latlong backend(rust)
+// Also test public fallback == rust at default nrep=100000 for i0
+spurtest i0 y, q(15) nrep(100000) seed(42) latlong backend(rust) nthreads(1)
 local r_stat = r(teststat)
 local r_ha = r(ha_param)
 spurtest i0 y, q(15) nrep(100000) seed(42) latlong backend(fallback)
@@ -283,6 +287,48 @@ foreach flavor in i0resid i1resid {
     set seed 7
     mata: _test_verify_canon_test("`flavor'", "y", "", "_all_one", "latlong", 10, 301, `r_p', `r_stat', `r_ha', "r_cv", 0.05)
 }
+
+// Inference is invariant to positive changes in response units.
+gen double ylarge = y * 1e200
+foreach backend in fallback rust {
+    foreach flavor in i0 i1 i0resid i1resid {
+        local xvars ""
+        if strpos("`flavor'", "resid") local xvars "x1 x2"
+        spurtest `flavor' y `xvars', q(8) nrep(401) seed(42) backend(`backend')
+        local p = r(p)
+        local stat = r(teststat)
+        spurtest `flavor' ylarge `xvars', q(8) nrep(401) seed(42) backend(`backend')
+        assert abs(r(p) - `p') < 1e-10
+        assert abs(r(teststat) - `stat') < 1e-8 * max(1, abs(`stat'))
+    }
+    spurhalflife y, q(8) nrep(301) seed(42) normdist backend(`backend')
+    local lower = r(ci_l)
+    local upper = r(ci_u)
+    spurhalflife ylarge, q(8) nrep(301) seed(42) normdist backend(`backend')
+    assert abs(r(ci_l) - `lower') < 1e-10
+    assert (missing(r(ci_u)) & missing(`upper')) | abs(r(ci_u) - `upper') < 1e-10
+}
+drop ylarge
+
+// Public seeded parity and scale invariance of the residual design.
+gen double xsmall = x1 * 1e-12
+foreach backend in fallback rust {
+    spurtest i0resid y x1 x2, q(8) nrep(401) seed(42) backend(`backend')
+    local p = r(p)
+    local stat = r(teststat)
+    spurtest i0resid y xsmall x2, q(8) nrep(401) seed(42) backend(`backend')
+    assert abs(r(p) - `p') < 1e-10
+    assert abs(r(teststat) - `stat') < 1e-8
+}
+spurtest i0resid y x1 x2, q(8) nrep(401) seed(42) backend(rust)
+local p = r(p)
+local stat = r(teststat)
+local state_native `"`c(rngstate)'"'
+spurtest i0resid y x1 x2, q(8) nrep(401) seed(42) backend(fallback)
+assert abs(r(p) - `p') < 1e-10
+assert abs(r(teststat) - `stat') < 1e-8
+assert `"`c(rngstate)'"' == `"`state_native'"'
+drop xsmall
 
 // 1b. If/in subsetting parity
 spurtest i0 y if _n <= 110 in 10/130, q(8) nrep(301) seed(11) latlong backend(rust)
@@ -578,6 +624,51 @@ capture spurhalflife y, level(100)
 assert _rc == 198
 capture spurtransform y, prefix(t_) transformation(nn) radius(1)
 assert _rc == 198
+
+// Experiment validation, units and same-seed public RNG state.
+clear
+set obs 30
+gen double s_1 = _n - 1
+gen double s_2 = 0
+gen double y = sin(s_1)
+gen double x = cos(s_1 * .7)
+gen double xsmall = x * 1e-12
+foreach backend in fallback rust {
+    capture spurtest i0 y, q(1) nrep(99) seed(42) backend(`backend')
+    assert _rc == 198
+    capture spurtest i0resid y x, q(29) nrep(99) seed(42) backend(`backend')
+    assert _rc != 0
+    capture spurhalflife y, q(1) nrep(99) seed(42) backend(`backend')
+    assert _rc == 198
+    spurhalflife y, q(4) nrep(99) seed(42) normdist backend(`backend')
+    local lower = r(ci_l)
+    assert abs(r(max_dist) - 29) < 1e-10
+    spurhalflife y, q(4) nrep(99) seed(42) backend(`backend')
+    assert abs(r(max_dist) - 29) < 1e-10
+    assert abs(r(ci_l) - 29 * `lower') < 1e-8
+}
+replace s_1 = 3 * s_1
+foreach backend in fallback rust {
+    spurhalflife y, q(4) nrep(99) seed(42) backend(`backend')
+    assert abs(r(max_dist) - 87) < 1e-10
+    assert abs(r(ci_l) - 87 * `lower') < 1e-8
+}
+
+// Equilateral geometry has proportional projected covariance shapes.
+clear
+input double s_1 s_2 y
+0 0 0
+1 0 1
+.5 .8660254037844386 2
+end
+foreach backend in fallback rust {
+    capture spurtest i0 y, q(2) nrep(99) seed(42) backend(`backend')
+    assert _rc != 0
+    capture spurtest i1 y, q(2) nrep(99) seed(42) backend(`backend')
+    assert _rc != 0
+    capture spurhalflife y, q(2) nrep(99) seed(42) backend(`backend')
+    assert _rc != 0
+}
 
 // Final check on user Mata globals
 mata: assert(emat == 999)

@@ -51,3 +51,11 @@ Becker, Sascha O., P. David Boll and Hans-Joachim Voth "Testing and Correcting f
 Chetty, Raj, Nathaniel Hendren, Patrick Kline, Emmanuel Saez "Where is the land of Opportunity? The Geography of Intergenerational Mobility in the United States" , The Quarterly Journal of Economics 129(4) (2014), 1553–1623, https://doi.org/10.1093/qje/qju022
 
 Müller, Ulrich K. and Mark W. Watson "Spatial Unit Roots and Spurious Regression", Econometrica 92(5) (2024), 1661–1695. https://www.princeton.edu/~umueller/SPUR.pdf.
+
+SPUR inference requires at least two informative weighted directions. Residual
+procedures also require `q` no larger than the residual degrees of freedom.
+Experiments with insufficient covariance rank or proportional covariance shapes
+return an error. Euclidean half-lives use the coordinate units; geographic
+half-lives use meters. The Mata fallback uses the same type-7 simulation
+quantiles and canonical basis orientation as the native backend; these choices
+can change finite-simulation results relative to earlier Mata releases.

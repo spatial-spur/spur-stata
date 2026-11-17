@@ -35,7 +35,7 @@ real scalar getpow_qf(real matrix om0, real matrix om1, real matrix e) {
     lr_a = qo_a :/ qe
   
     // Step 6: Compute 95th percentile critical value and calculate power
-    cv = mm_quantile(lr_o', 1, 0.95) // 95th percentile of lr_o
+    cv = spur_quantile(lr_o', 0.95) // 95th percentile of lr_o
     pow = mean(lr_a' :> cv)
   
     return(pow)

@@ -13,7 +13,12 @@ real scalar get_ha_parm_I1(real matrix om_ho, real matrix distmat, real matrix R
     ctry = getcbar(0.95, distmat)  // Initial guess for c
 
     // Step 1: Decrease `c` until `pow` is less than 0.5
+    ii = 0
     while (pow > pow50) {
+        if (++ii > 200) {
+            errprintf("SPUR power calibration could not bracket the target\n")
+            exit(198)
+        }
         c = ctry
         sigdm_c = get_sigma_dm(distmat, c)
         om_c = R' * sigdm_c * R
@@ -26,7 +31,12 @@ real scalar get_ha_parm_I1(real matrix om_ho, real matrix distmat, real matrix R
     // Step 2: Increase `c` until `pow` is greater than 0.5
     pow = 0
     ctry = getcbar(0.01, distmat)  // Another initial guess for c
+    ii = 0
     while (pow < pow50) {
+        if (++ii > 200) {
+            errprintf("SPUR power calibration could not bracket the target\n")
+            exit(198)
+        }
         c = ctry
         sigdm_c = get_sigma_dm(distmat, c)
         om_c = R' * sigdm_c * R

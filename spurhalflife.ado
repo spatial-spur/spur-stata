@@ -10,8 +10,8 @@ program define spurhalflife, rclass sortpreserve
 		di as error "Invalid level."
 		exit 198
 	}
-	if `q' < 1 {
-		di as error "q() must be at least 1"
+	if `q' < 2 {
+		di as error "q() must be at least 2 for half-life inference"
 		exit 198
 	}
 	if `nrep' < 1 {

@@ -11,7 +11,18 @@ struct struct_spatial_persistence {
 struct struct_spatial_persistence scalar spatial_persistence(real matrix Z, real matrix distmat, real matrix emat, real scalar level) {
 	
 	real scalar n_hl, n_hl_ha, n_hl_grid_ho, ci_l, ci_u
-	real matrix hl_grid_ho, hl_grid_ha, c_grid_ho, c_grid_ha, pv_mat, ii, hl
+	real matrix hl_grid_ho, hl_grid_ha, c_grid_ho, c_grid_ha, pv_mat, ii, hl, Z_dm
+
+	if (rows(emat) < 2) {
+		errprintf("half-life inference requires q >= 2 weighted directions\n")
+		exit(198)
+	}
+	if (max(Z) - min(Z) == 0) {
+		errprintf("response y is constant; half-life inference requires variation in y\n")
+		exit(198)
+	}
+	Z_dm = Z :- mean(Z)
+	Z_dm = Z_dm :/ max(abs(Z_dm))
 	
 	n_hl = 100
 	hl_grid_ho = rangen(0.001,1,n_hl)
@@ -24,7 +35,7 @@ struct struct_spatial_persistence scalar spatial_persistence(real matrix Z, real
 	c_grid_ho = -log(0.5) :/ hl_grid_ho
 	c_grid_ha = -log(0.5) :/ hl_grid_ha
 	
-	pv_mat=c_ci(Z,distmat,emat,c_grid_ho,c_grid_ha)
+	pv_mat=c_ci(Z_dm,distmat,emat,c_grid_ho,c_grid_ha)
     ii = pv_mat :> 1 - level
     hl = select(hl_grid_ho,ii)
     ci_l = min(hl)
@@ -47,8 +58,8 @@ real matrix c_ci(real matrix Y, real matrix distmat, real matrix emat,
 				 	
     // Variable declarations
     real scalar q, n, n_c_ho, n_c_ha, i, j
-    real scalar rho_bm, c, const_den, den_ho_X, den_ha_avg_X, lr_X
-    real matrix sigdm_bm, R, lam, om, sigdm, omi
+    real scalar rho_bm, c, const_den, den_ho_X, den_ha_avg_X, lr_X, informative
+    real matrix sigdm_bm, R, lam, om, sigdm, omi, om_ref
     real matrix ch_om_mat, ch_omi_mat, const_den_mat
     real matrix ch_omi_mat_ha, const_den_mat_ha
     real matrix sz_vec, cv_mat, pv_mat, X, den_ho_X_mat, den_ha_avg_X_mat
@@ -59,6 +70,10 @@ real matrix c_ci(real matrix Y, real matrix distmat, real matrix emat,
     n = rows(distmat)
     n_c_ho = length(c_grid_ho)
     n_c_ha = length(c_grid_ha)
+    if (q < 2) {
+        errprintf("half-life inference requires q >= 2 weighted directions\n")
+        exit(198)
+    }
     
 
     // BM covariance matrix
@@ -68,6 +83,24 @@ real matrix c_ci(real matrix Y, real matrix distmat, real matrix emat,
 
     // Construct R and eigenvectors
     R = get_R(sigdm_bm, q)
+    X = R' * (Y :- mean(Y))
+    if (norm(X) == 0 | norm(X) <= 1e-12 * norm(Y :- mean(Y))) {
+        errprintf("projected SPUR vector has zero norm\n")
+        exit(198)
+    }
+
+    om_ref = R' * get_sigma_dm(distmat, c_grid_ho[1]) * R
+    informative = 0
+    for (i = 2; i <= n_c_ho; i++) {
+        if (!spur_shape_equal(om_ref, R' * get_sigma_dm(distmat, c_grid_ho[i]) * R)) informative = 1
+    }
+    for (i = 1; i <= n_c_ha; i++) {
+        if (!spur_shape_equal(om_ref, R' * get_sigma_dm(distmat, c_grid_ha[i]) * R)) informative = 1
+    }
+    if (!informative) {
+        errprintf("half-life covariance shapes are uninformative\n")
+        exit(198)
+    }
 
     // Compute Omega matrices for c_grid_ho
     ch_om_mat = asarray_create("real",1)
@@ -103,7 +136,6 @@ real matrix c_ci(real matrix Y, real matrix distmat, real matrix emat,
 	sz_vec = (0.10, 0.05, 0.01)
     cv_mat = J(length(sz_vec), n_c_ho, .)
     pv_mat = J(n_c_ho, 1, .)
-    X = R' * Y
     den_ho_X_mat = J(n_c_ho, 1, .)
     den_ha_avg_X_mat = J(n_c_ho, 1, .)
 
@@ -132,7 +164,7 @@ real matrix c_ci(real matrix Y, real matrix distmat, real matrix emat,
 	
         den_ha_avg = mean(den_ha_mat')'
         lr = den_ha_avg :/ den_ho
-		cvalue = mm_quantile(lr,1, (1 :- sz_vec'))
+		cvalue = spur_quantile(lr, (1 :- sz_vec'))
         cv_mat[.,i] = cvalue
         den_ha_avg_X = mean(den_ha_mat_X)'
         lr_X = den_ha_avg_X / den_ho_X

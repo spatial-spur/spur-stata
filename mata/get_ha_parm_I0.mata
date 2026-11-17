@@ -10,7 +10,12 @@ real scalar get_ha_parm_I0(real matrix om_ho, real matrix om_i0, real matrix om_
     // Initial search for lower bound where power < 0.5
     pow = 1
     gtry = 1
+    ii = 0
     while (pow > 0.5) {
+        if (++ii > 200) {
+            errprintf("SPUR power calibration could not bracket the target\n")
+            exit(198)
+        }
         g = gtry;
         // Verify that power is less than 50%
         pow = getpow_qf(om_ho, om_i0 + g * om_bm, e)
@@ -21,7 +26,12 @@ real scalar get_ha_parm_I0(real matrix om_ho, real matrix om_i0, real matrix om_
     // Initial search for upper bound where power > 0.5
     pow = 0
     gtry = 30
+    ii = 0
     while (pow < 0.5) {
+        if (++ii > 200) {
+            errprintf("SPUR power calibration could not bracket the target\n")
+            exit(198)
+        }
         g = gtry
         // Verify that power is greater than 50%
         pow = getpow_qf(om_ho, om_i0 + g * om_bm, e)

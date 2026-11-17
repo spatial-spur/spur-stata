@@ -42,6 +42,11 @@ struct struct_spatial_i0_test scalar spatial_i0_test(real matrix Y, real matrix 
     om_rho = R' * sigdm_rho * R
     om_bm = R' * sigdm_bm * R
 
+    if (spur_shape_equal(om_rho, om_bm)) {
+        errprintf("SPUR covariance shapes are uninformative\n")
+        exit(198)
+    }
+
     // Find value of Ha parameter that yields (roughly 50% power)
     om_i0 = om_rho
     om_ho = om_rho
@@ -56,8 +61,17 @@ struct struct_spatial_i0_test scalar spatial_i0_test(real matrix Y, real matrix 
     n_y = cols(Y)
     LR = J(n_y, 1, .)
     for (i = 1; i <= n_y; i++) {
+        if (max(Y[,i]) - min(Y[,i]) == 0) {
+            errprintf("response Y is constant; SPUR inference requires variation in Y\n")
+            exit(198)
+        }
         X = Y[,i] :- mean(Y[,i])
+        X = X :/ max(abs(X))
         P = R' * X
+        if (norm(P) == 0 | norm(P) <= 1e-12 * norm(X)) {
+            errprintf("projected SPUR vector has zero norm\n")
+            exit(198)
+        }
         y_P_ho = ch_omi_ho * P
         y_P_ha = ch_omi_ha * P
         q_P_ho = colsum(y_P_ho:^2)'
@@ -94,7 +108,7 @@ struct struct_spatial_i0_test scalar spatial_i0_test(real matrix Y, real matrix 
         q_ho_ho = colsum(y_ho_ho:^2)
         q_ho_ha = colsum(y_ho_ha:^2)
         lr_ho = q_ho_ho :/ q_ho_ha
-        cv_vec = mm_quantile(lr_ho',1, (1 :- sz_vec'))
+        cv_vec = spur_quantile(lr_ho', (1 :- sz_vec'))
         cvalue_mat[ir,] = cv_vec'
         for (j = 1; j <= n_y; j++) {
             pvalue_mat[ir,j] = mean(lr_ho' :> LR[j])

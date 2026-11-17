@@ -37,6 +37,13 @@ struct struct_spatial_i1_test scalar spatial_i1_test(real matrix Y, real matrix 
      // Calculate matrices used in analysis
      om_ho = R' * sigdm_bm * R
 
+     if (spur_shape_equal(om_ho, R' * get_sigma_dm(distmat, getcbar(.01, distmat)) * R) &
+         spur_shape_equal(om_ho, R' * get_sigma_dm(distmat, getcbar(.5, distmat)) * R) &
+         spur_shape_equal(om_ho, R' * get_sigma_dm(distmat, getcbar(.95, distmat)) * R)) {
+         errprintf("SPUR covariance shapes are uninformative\n")
+         exit(198)
+     }
+
      // Determine Ha parameter that yields ~50% power
      ha_parm = get_ha_parm_I1(om_ho, distmat, R, emat)
      sigdm_ha = get_sigma_dm(distmat, ha_parm)
@@ -57,14 +64,23 @@ struct struct_spatial_i1_test scalar spatial_i1_test(real matrix Y, real matrix 
 
      // Critical values
      sz_vec = (0.01, 0.05, 0.10)
-     cv_vec = mm_quantile(lr_ho',1,(1 :- sz_vec'))
+     cv_vec = spur_quantile(lr_ho',(1 :- sz_vec'))
 
      // Likelihood Ratio Test and p-values
      LR = J(n_y, 1, .)
      pvalue = J(n_y, 1, .)
      for (i = 1; i <= n_y; i++) {
+         if (max(Y[., i]) - min(Y[., i]) == 0) {
+             errprintf("response Y is constant; SPUR inference requires variation in Y\n")
+             exit(198)
+         }
          X = Y[., i] :- mean(Y[., i])
+         X = X :/ max(abs(X))
          P = R' * X
+         if (norm(P) == 0 | norm(P) <= 1e-12 * norm(X)) {
+             errprintf("projected SPUR vector has zero norm\n")
+             exit(198)
+         }
          LR[i] = (P' * omi_ho * P) / (P' * omi_ha * P)
          pvalue[i] = mean((lr_ho :> LR[i])')
      }

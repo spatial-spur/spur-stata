@@ -73,7 +73,7 @@ Note: This command and all others in this package rely on the {cmd: moremata} pa
 {title:Options}
 
 {phang}
-{opt q(#)} specifies the number of weighted averages to be used in the test. The default is {opt q(15)}. See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker, Boll and Voth (2026)} for details.
+{opt q(#)} specifies the number of weighted averages to be used in the test. The default is {opt q(15)}. At least two informative directions are required; residual tests also require q not to exceed the residual degrees of freedom. See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker, Boll and Voth (2026)} for details.
 
 {phang}
 {opt nrep(#)} specifies the number of Monte Carlo draws to be used to simulate the distribution of the test statistic. The default is {opt nrep(100000)}. See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker, Boll and Voth (2026)} for details.
