@@ -1,4 +1,4 @@
-*! version 1.0.0  23apr2026 DGoettlich
+*! version 1.1.0  17nov2026 spatial-spur
 program define spur, rclass sortpreserve
 	version 14
 
@@ -12,94 +12,218 @@ program define spur, rclass sortpreserve
 			uncond ///
 			cvs ///
 			Replace ///
+			BACKend(string) ///
+			nthreads(integer -1) ///
 		]
-
-	// check moremata installed
-	cap which moremata.hlp
-	if _rc {
-		display as error in smcl `"Please install package {it:moremata} from SSC in order to use this command;"' _newline ///
-        `"you can do so by clicking this link: {stata "ssc install moremata, replace":auto-install moremata}"'
-		exit 199
-	}
 
 	// check scpc installed
 	cap which scpc
 	if _rc {
 		display as error in smcl `"Please install package {it:scpc} in order to use this command;"' _newline ///
-        `"which you can find under: {browse "https://github.com/ukmueller/SCPC/"}"'
+        `"which you can do so by clicking this link: {browse "https://github.com/ukmueller/SCPC/":SCPC}"'
 		exit 199
 	}
 
-	if `avc'==-1 {
+	if `q' < 1 {
+		di as error "q() must be at least 1"
+		exit 198
+	}
+	if `nrep' < 1 {
+		di as error "nrep() must be at least 1"
+		exit 198
+	}
+	if `seed' < 0 | `seed' >= 4294967296 {
+		di as error "seed() must be an integer in [0, 2^32)"
+		exit 198
+	}
+
+	if `avc' == -1 {
 		local avc 0.03
 	}
+	if `avc' < 0.001 | `avc' > 0.99 {
+		di as error "avc() must be between 0.001 and 0.99"
+		exit 198
+	}
+
+	_spur_backend resolve, backend(`"`backend'"') nthreads(`nthreads')
+	local req_backend "`r(req_backend)'"
+	local nthreads_arg "`r(nthreads)'"
+	local plugin_ok = r(plugin_ok)
 
 	gettoken depvar indepvars : varlist
 
 	local prefix h_
 	local transformation lbmgls
 	local ncoef : word count `varlist'
+	local k_x_raw : word count `indepvars'
 
-	local test_options q(`q') nrep(`nrep') seed(`seed')
-	if "`latlong'"!="" {
-		local test_options `test_options' latlong
+	// Validate destination variable names up front when replace is omitted
+	if "`replace'" == "" {
+		foreach v of local varlist {
+			capture confirm new variable `prefix'`v'
+			if _rc {
+				di as error "`prefix'`v' already defined or invalid name"
+				exit 110
+			}
+		}
 	}
 
-	local scpc_options avc(`avc') k(`ncoef')
-	if "`latlong'"!="" {
+	marksample touse_all
+	marksample touse_y, novarlist
+	qui replace `touse_y' = 0 if missing(`depvar')
+	qui count if `touse_y' != `touse_all'
+	local same_sample = (r(N) == 0)
+
+	local use_pipeline = (`plugin_ok' == 1 & "`req_backend'" != "fallback" & `same_sample' == 1)
+
+	local scpc_options avc(`avc') k(`ncoef') backend(`req_backend') nthreads(`nthreads_arg')
+	if "`latlong'" != "" {
 		local scpc_options `scpc_options' latlong
 	}
-	if "`uncond'"!="" {
+	if "`uncond'" != "" {
 		local scpc_options `scpc_options' uncond
 	}
-	if "`cvs'"!="" {
+	if "`cvs'" != "" {
 		local scpc_options `scpc_options' cvs
 	}
 
-	local transform_options prefix(`prefix') transformation(`transformation')
-	if "`latlong'"!="" {
-		local transform_options `transform_options' latlong
-	}
-	if "`replace'"!="" {
-		local transform_options `transform_options' replace
-	}
-
 	tempname i0_teststat i0_p i0_ha_param i0_cv
-	quietly spurtest i0 `depvar' `if' `in', `test_options'
-	scalar `i0_teststat' = r(teststat)
-	scalar `i0_p' = r(p)
-	scalar `i0_ha_param' = r(ha_param)
-	matrix `i0_cv' = r(cv)
-
 	tempname i1_teststat i1_p i1_ha_param i1_cv
-	quietly spurtest i1 `depvar' `if' `in', `test_options'
-	scalar `i1_teststat' = r(teststat)
-	scalar `i1_p' = r(p)
-	scalar `i1_ha_param' = r(ha_param)
-	matrix `i1_cv' = r(cv)
-
 	tempname i0resid_teststat i0resid_p i0resid_ha_param i0resid_cv
-	quietly spurtest i0resid `depvar' `indepvars' `if' `in', `test_options'
-	scalar `i0resid_teststat' = r(teststat)
-	scalar `i0resid_p' = r(p)
-	scalar `i0resid_ha_param' = r(ha_param)
-	matrix `i0resid_cv' = r(cv)
-
 	tempname i1resid_teststat i1resid_p i1resid_ha_param i1resid_cv
-	quietly spurtest i1resid `depvar' `indepvars' `if' `in', `test_options'
-	scalar `i1resid_teststat' = r(teststat)
-	scalar `i1resid_p' = r(p)
-	scalar `i1resid_ha_param' = r(ha_param)
-	matrix `i1resid_cv' = r(cv)
-
 	tempname diagnostics
-	matrix `diagnostics' = ///
-		(`i0_teststat', `i0_p', `i0_ha_param' \ ///
-		 `i1_teststat', `i1_p', `i1_ha_param' \ ///
-		 `i0resid_teststat', `i0resid_p', `i0resid_ha_param' \ ///
-		 `i1resid_teststat', `i1resid_p', `i1resid_ha_param')
-	matrix rownames `diagnostics' = i0 i1 i0resid i1resid
-	matrix colnames `diagnostics' = teststat p ha_param
+
+	local diag_backend ""
+	local diag_tied 0
+
+	if `use_pipeline' == 1 {
+		_spur_backend check_coords, touse(`touse_all') `latlong' quiet
+		local slist "`r(slist)'"
+		local d = r(d)
+
+		local h_tmp_vars ""
+		local n_vars_tr = 1 + `k_x_raw'
+		forvalues j = 1/`n_vars_tr' {
+			tempvar h_tmp_`j'
+			qui gen double `h_tmp_`j'' = .
+			local h_tmp_vars "`h_tmp_vars' `h_tmp_`j''"
+		}
+
+		tempname pipe_diag pipe_cvs pipe_tied
+		matrix `pipe_diag' = J(4, 3, .)
+		matrix `pipe_cvs' = J(4, 3, .)
+
+		tempfile emat_file
+		set seed `seed'
+		_spur_backend write_emat, q(`q') nrep(`nrep') file(`"`emat_file'"')
+
+		local latlong_flag = cond("`latlong'" != "", 1, 0)
+		local plugin_vars "`slist' `varlist' `h_tmp_vars'"
+		local pcmd `"spur_pipeline `d' `k_x_raw' 1 `latlong_flag' `q' `nrep' "`nthreads_arg'" `"`emat_file'"' "`pipe_diag'" "`pipe_cvs'" "`pipe_tied'""'
+		capture noisily _spur_backend plugin_call, vars(`plugin_vars') cond(`touse_all') cmd(`"`pcmd'"')
+		local rc = _rc
+		capture erase `"`emat_file'"'
+		if `rc' != 0 {
+			exit `rc'
+		}
+
+		if "`req_backend'" == "auto" & scalar(`pipe_tied') == 1 {
+			local use_pipeline 0
+			local diag_tied 1
+		}
+		else {
+			local diag_backend "rust"
+			local diag_tied = scalar(`pipe_tied')
+
+			scalar `i0_teststat' = `pipe_diag'[1, 1]
+			scalar `i0_p' = `pipe_diag'[1, 2]
+			scalar `i0_ha_param' = `pipe_diag'[1, 3]
+			matrix `i0_cv' = (`pipe_cvs'[1, 1] \ `pipe_cvs'[1, 2] \ `pipe_cvs'[1, 3])
+
+			scalar `i1_teststat' = `pipe_diag'[2, 1]
+			scalar `i1_p' = `pipe_diag'[2, 2]
+			scalar `i1_ha_param' = `pipe_diag'[2, 3]
+			matrix `i1_cv' = (`pipe_cvs'[2, 1] \ `pipe_cvs'[2, 2] \ `pipe_cvs'[2, 3])
+
+			scalar `i0resid_teststat' = `pipe_diag'[3, 1]
+			scalar `i0resid_p' = `pipe_diag'[3, 2]
+			scalar `i0resid_ha_param' = `pipe_diag'[3, 3]
+			matrix `i0resid_cv' = (`pipe_cvs'[3, 1] \ `pipe_cvs'[3, 2] \ `pipe_cvs'[3, 3])
+
+			scalar `i1resid_teststat' = `pipe_diag'[4, 1]
+			scalar `i1resid_p' = `pipe_diag'[4, 2]
+			scalar `i1resid_ha_param' = `pipe_diag'[4, 3]
+			matrix `i1resid_cv' = (`pipe_cvs'[4, 1] \ `pipe_cvs'[4, 2] \ `pipe_cvs'[4, 3])
+
+			matrix `diagnostics' = `pipe_diag'
+			matrix rownames `diagnostics' = i0 i1 i0resid i1resid
+			matrix colnames `diagnostics' = teststat p ha_param
+		}
+	}
+
+	if `use_pipeline' == 0 {
+		local indiv_backend = cond(`diag_tied' == 1, "fallback", "`req_backend'")
+		local test_options q(`q') nrep(`nrep') seed(`seed') backend(`indiv_backend') nthreads(`nthreads_arg')
+		if "`latlong'" != "" {
+			local test_options `test_options' latlong
+		}
+
+		local transform_options prefix(`prefix') transformation(`transformation') backend(`indiv_backend') nthreads(`nthreads_arg')
+		if "`latlong'" != "" {
+			local transform_options `transform_options' latlong
+		}
+		if "`replace'" != "" {
+			local transform_options `transform_options' replace
+		}
+
+		quietly spurtest i0 `depvar' `if' `in', `test_options'
+		scalar `i0_teststat' = r(teststat)
+		scalar `i0_p' = r(p)
+		scalar `i0_ha_param' = r(ha_param)
+		matrix `i0_cv' = r(cv)
+		local be_i0 "`r(backend)'"
+		local ti_i0 = r(tied)
+
+		quietly spurtest i1 `depvar' `if' `in', `test_options'
+		scalar `i1_teststat' = r(teststat)
+		scalar `i1_p' = r(p)
+		scalar `i1_ha_param' = r(ha_param)
+		matrix `i1_cv' = r(cv)
+		local be_i1 "`r(backend)'"
+		local ti_i1 = r(tied)
+
+		quietly spurtest i0resid `depvar' `indepvars' `if' `in', `test_options'
+		scalar `i0resid_teststat' = r(teststat)
+		scalar `i0resid_p' = r(p)
+		scalar `i0resid_ha_param' = r(ha_param)
+		matrix `i0resid_cv' = r(cv)
+		local be_i0r "`r(backend)'"
+		local ti_i0r = r(tied)
+
+		quietly spurtest i1resid `depvar' `indepvars' `if' `in', `test_options'
+		scalar `i1resid_teststat' = r(teststat)
+		scalar `i1resid_p' = r(p)
+		scalar `i1resid_ha_param' = r(ha_param)
+		matrix `i1resid_cv' = r(cv)
+		local be_i1r "`r(backend)'"
+		local ti_i1r = r(tied)
+
+		matrix `diagnostics' = ///
+			(`i0_teststat', `i0_p', `i0_ha_param' \ ///
+			 `i1_teststat', `i1_p', `i1_ha_param' \ ///
+			 `i0resid_teststat', `i0resid_p', `i0resid_ha_param' \ ///
+			 `i1resid_teststat', `i1resid_p', `i1resid_ha_param')
+		matrix rownames `diagnostics' = i0 i1 i0resid i1resid
+		matrix colnames `diagnostics' = teststat p ha_param
+
+		if "`be_i0'" == "rust" & "`be_i1'" == "rust" & "`be_i0r'" == "rust" & "`be_i1r'" == "rust" {
+			local diag_backend "rust"
+		}
+		else {
+			local diag_backend "fallback"
+		}
+		local diag_tied = max(`diag_tied', `ti_i0', `ti_i1', `ti_i0r', `ti_i1r')
+	}
 
 	quietly regress `depvar' `indepvars' `if' `in', robust
 
@@ -112,16 +236,32 @@ program define spur, rclass sortpreserve
 
 	tempname levels_scpcstats levels_scpccvs
 	matrix `levels_scpcstats' = e(scpcstats)
-	if "`cvs'"!="" {
+	if "`cvs'" != "" {
 		matrix `levels_scpccvs' = e(scpccvs)
 	}
-
-	quietly spurtransform `depvar' `indepvars' `if' `in', `transform_options'
+	local levels_scpc_be "`e(backend)'"
+	local levels_scpc_tied = e(tied)
 
 	local transformed_depvar `prefix'`depvar'
 	local transformed_indepvars
 	foreach var of local indepvars {
 		local transformed_indepvars `transformed_indepvars' `prefix'`var'
+	}
+
+	local tr_backend "`diag_backend'"
+	if `use_pipeline' == 1 {
+		forvalues j = 1/`n_vars_tr' {
+			local vname : word `j' of `varlist'
+			local hv : word `j' of `h_tmp_vars'
+			if "`replace'" != "" {
+				capture drop `prefix'`vname'
+			}
+			rename `hv' `prefix'`vname'
+		}
+	}
+	else {
+		quietly spurtransform `depvar' `indepvars' `if' `in', `transform_options'
+		local tr_backend "`r(backend)'"
 	}
 
 	quietly regress `transformed_depvar' `transformed_indepvars' `if' `in', robust
@@ -135,9 +275,17 @@ program define spur, rclass sortpreserve
 
 	tempname transformed_scpcstats transformed_scpccvs
 	matrix `transformed_scpcstats' = e(scpcstats)
-	if "`cvs'"!="" {
+	if "`cvs'" != "" {
 		matrix `transformed_scpccvs' = e(scpccvs)
 	}
+	local tr_scpc_be "`e(backend)'"
+	local tr_scpc_tied = e(tied)
+
+	local used_backend "fallback"
+	if "`diag_backend'" == "rust" & "`tr_backend'" == "rust" & "`levels_scpc_be'" == "rust" & "`tr_scpc_be'" == "rust" {
+		local used_backend "rust"
+	}
+	local any_tied = max(`diag_tied', `levels_scpc_tied', `tr_scpc_tied')
 
 	display as text "SPUR Diagnostics"
 	matlist `diagnostics', border(all) format(%9.4f)
@@ -182,11 +330,15 @@ program define spur, rclass sortpreserve
 	return scalar transformed_r2_a = `transformed_r2_a'
 	return matrix transformed_scpcstats = `transformed_scpcstats'
 
-	if "`cvs'"!="" {
+	if "`cvs'" != "" {
 		return matrix levels_scpccvs = `levels_scpccvs'
 		return matrix transformed_scpccvs = `transformed_scpccvs'
 	}
 
+	return scalar tied = `any_tied'
+	return local backend "`used_backend'"
+	return local scpc_levels_backend "`levels_scpc_be'"
+	return local scpc_transformed_backend "`tr_scpc_be'"
 	return local depvar "`depvar'"
 	return local indepvars "`indepvars'"
 	return local transformed_depvar "`transformed_depvar'"

@@ -25,6 +25,8 @@ f _spurtest_i1.ado
 f _spurtest_i0.ado
 f _spurtest_i1resid.ado
 f _spurtest_i0resid.ado
+f _spur_backend.ado
+f spur_rust.plugin
 f lspur.mlib
 f example.do 
 f example_data/Chetty_Data_1.xlsx
