@@ -16,6 +16,10 @@ program define _spur_backend, rclass
             local req_backend = lower(trim(`"$SPATIAL_BACKEND"'))
         }
         if "`req_backend'" == "" {
+                local env_backend : environment SPATIAL_BACKEND
+                local req_backend = lower(trim(`"`env_backend'"'))
+        }
+        if "`req_backend'" == "" {
             local req_backend "auto"
         }
         if "`req_backend'" != "auto" & "`req_backend'" != "rust" & "`req_backend'" != "fallback" {
@@ -28,13 +32,15 @@ program define _spur_backend, rclass
         }
 
         local plugin_ok 0
+        local backend_reason "requested fallback"
         if "`req_backend'" != "fallback" {
-            capture plugin call _spur_rust_plugin, ping_spur_v2
+            local plugin_reason "compatible spur_rust.plugin (v3) could not be loaded. Install the matching plugin"
+            capture plugin call _spur_rust_plugin, ping_spur_v3
             if _rc == 0 {
                 local plugin_ok 1
             }
             else {
-                capture program list _spur_rust_plugin
+                capture plugin call _spur_rust_plugin, ping_spur_v1
                 if _rc != 0 {
                     capture program _spur_rust_plugin, plugin using("spur_rust.plugin")
                     if _rc != 0 {
@@ -44,17 +50,28 @@ program define _spur_backend, rclass
                         }
                     }
                 }
-                capture plugin call _spur_rust_plugin, ping_spur_v2
+                capture plugin call _spur_rust_plugin, ping_spur_v3
                 if _rc == 0 {
                     local plugin_ok 1
                 }
+                else {
+                    capture plugin call _spur_rust_plugin, ping_spur_v1
+                    if _rc == 0 {
+                        local plugin_reason "loaded spur_rust.plugin is incompatible with the required API (v3). Install the matching plugin and restart Stata"
+                    }
+                }
             }
-            if "`req_backend'" == "rust" & `plugin_ok' == 0 {
-                di as error "compatible spur_rust.plugin (v2) could not be loaded for backend(rust)"
-                exit 199
+            local backend_reason ""
+            if `plugin_ok' == 0 {
+                local backend_reason "`plugin_reason'"
+                if "`req_backend'" == "rust" {
+                    di as error "`backend_reason'"
+                    exit 199
+                }
             }
         }
 
+        return local backend_reason "`backend_reason'"
         return local req_backend "`req_backend'"
         return local nthreads "`nthreads'"
         return scalar plugin_ok = `plugin_ok'
@@ -113,9 +130,16 @@ program define _spur_backend, rclass
             exit 999
         }
 
-        if "`latlong'" != "" & `d' != 2 {
-            disp as text "with latlong option, there must only be s_1 and s_2 present"
-            exit 999
+        if "`latlong'" != "" {
+            if `d' != 2 {
+                di as error "latlong requires exactly two coordinates in s_1 and s_2"
+                exit 198
+            }
+            quietly count if `touse' & (!inrange(s_1, -90, 90) | !inrange(s_2, -180, 180))
+            if r(N) > 0 {
+                di as error "latlong requires latitude in [-90, 90] and longitude in [-180, 180]"
+                exit 198
+            }
         }
 
         if "`quiet'" == "" {
@@ -135,7 +159,7 @@ program define _spur_backend, rclass
         local d_str = strofreal(`d', "%3.0f")
         disp as text "found `ns_str' observations and `d_str'-dimensional locations in s_*"
         if "`latlong'" == "" {
-            disp as text "using Euclidan norm to compute distance between locations stored in s_*"
+            disp as text "using Euclidean norm to compute distance between locations stored in s_*"
         }
         else {
             disp as text "Computing distances on surface of sphere treating s_1 as latitude and s_2 as longitude"
@@ -213,11 +237,17 @@ program define _spur_backend, rclass
         local req_backend "`r(req_backend)'"
         local nthreads_arg "`r(nthreads)'"
         local plugin_ok = r(plugin_ok)
+        local backend_reason "`r(backend_reason)'"
 
         _spur_backend check_coords, touse(`touse') `latlong' quiet
         local slist "`r(slist)'"
         local d = r(d)
         local n_obs = r(n)
+
+        if `q' >= `n_obs' {
+            di as error "q() must be smaller than the number of observations"
+            exit 198
+        }
 
         tempname p teststat ha cv tied_scal
         local used_backend ""
@@ -255,6 +285,7 @@ program define _spur_backend, rclass
                     q(`q') nrep(`nrep') pmat(`p') statscal(`teststat') hascal(`ha') cvmat(`cv')
                 local used_backend "fallback"
                 local tied_val 1
+                local backend_reason "tied eigenspace"
             }
             else {
                 _spur_backend print_coords, n(`n_obs') d(`d') `latlong'
@@ -269,6 +300,7 @@ program define _spur_backend, rclass
         return matrix cv = `cv'
         return scalar tied = `tied_val'
         return local backend "`used_backend'"
+        return local backend_reason "`backend_reason'"
         exit
     }
 

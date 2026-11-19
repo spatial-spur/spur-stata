@@ -4,13 +4,16 @@ mata mata clear
 set more off
 version 14
 
-local repo_root "/Users/pauldavidboll/Github/spatial-spur"
+// Run from the shared workspace root or pass its path as the first argument.
+args repo_root
+if `"`repo_root'"' == "" local repo_root "."
 adopath ++ "`repo_root'/scpc-stata/src"
 adopath ++ "`repo_root'/spur-stata"
 
-// Preload scpc.ado once before defining test Mata functions, since scpc.ado
-// executes `mata mata clear` on initial load.
-capture scpc
+// Verify first loading SCPC preserves the calling session's Mata state.
+mata: s = (2, 3)
+scpc, capabilities
+mata: assert(s == (2, 3))
 
 capture program drop assert_mat_close
 program define assert_mat_close
@@ -541,16 +544,22 @@ spurtest i0 y, q(10) nrep(301) seed(42) latlong backend(rust)
 assert "`r(backend)'" == "rust"
 mata: assert(emat == 999)
 
-// Partial missing in x1 -> different touse between i0(y) and i0resid(y x1)
+// Missing x1 selects shared complete cases for all wrapper stages.
 preserve
 replace x1 = . in 1/10
 spur y x1 x2, q(10) nrep(250) seed(42) latlong backend(rust) replace
 assert "`r(backend)'" == "rust"
 matrix pm_tr_r = r(transformed_scpcstats)
+matrix pm_diag_r = r(diagnostics)
+assert "`r(i0_backend)'" == "rust"
+quietly spurtest i0 y if !missing(x1, x2), q(10) nrep(250) seed(42) latlong backend(rust)
+assert abs(r(teststat) - pm_diag_r[1,1]) < 1e-12
 rename (h_y h_x1 h_x2) (pm_y pm_x1 pm_x2)
 spur y x1 x2, q(10) nrep(250) seed(42) latlong backend(fallback) replace
 assert "`r(backend)'" == "fallback"
 matrix pm_tr_f = r(transformed_scpcstats)
+matrix pm_diag_f = r(diagnostics)
+assert_mat_close pm_diag_r pm_diag_f 1e-6
 assert_mat_close pm_tr_r pm_tr_f 1e-6
 assert_var_close h_y pm_y 1e-6
 assert_var_close h_x1 pm_x1 1e-6
@@ -581,6 +590,7 @@ gen double y = cos(theta) + 0.5 * x1
 spurtest i0 y, q(15) nrep(200) seed(42) backend(auto)
 assert r(tied) == 1
 assert "`r(backend)'" == "fallback"
+assert "`r(backend_reason)'" == "tied eigenspace"
 
 spurtest i0 y, q(15) nrep(200) seed(42) backend(rust)
 assert r(tied) == 1
@@ -589,6 +599,8 @@ assert "`r(backend)'" == "rust"
 spur y x1, q(15) nrep(200) seed(42) backend(auto)
 assert r(tied) == 1
 assert "`r(backend)'" == "fallback"
+assert "`r(diagnostics_backend_reason)'" == "tied eigenspace"
+assert "`r(transform_backend)'" == "rust"
 rename (h_y h_x1) (auto_hy auto_hx1)
 spur y x1, q(15) nrep(200) seed(42) backend(fallback) replace
 assert_var_close auto_hy h_y 1e-12
@@ -642,7 +654,10 @@ foreach backend in fallback rust {
     assert _rc == 198
     capture spur y x, q(1) nrep(99) seed(42) backend(`backend')
     assert _rc == 198
+    spurhalflife y, q(4) nrep(99) seed(42) level(.1) backend(`backend')
+    assert r(empty) == 1 & missing(r(ci_l)) & missing(r(ci_u))
     spurhalflife y, q(4) nrep(99) seed(42) normdist backend(`backend')
+    assert r(empty) == 0
     local lower = r(ci_l)
     assert abs(r(max_dist) - 29) < 1e-10
     spurhalflife y, q(4) nrep(99) seed(42) backend(`backend')
@@ -676,5 +691,23 @@ foreach backend in fallback rust {
 mata: assert(emat == 999)
 mata: assert(y == 888)
 mata: assert(H == 777)
+
+// Out-of-range coordinates fail consistently before any geographic computation.
+clear
+set obs 20
+generate double s_1 = _n
+generate double s_2 = sin(_n)
+generate double y = cos(_n)
+replace s_1 = 91 in 1
+foreach backend in rust auto fallback {
+    capture noisily spurtest i0 y, q(2) nrep(20) latlong backend(`backend')
+    assert _rc == 198
+    capture noisily spurtransform y, prefix(bad_) latlong backend(`backend')
+    assert _rc == 198
+}
+capture confirm variable bad_y
+assert _rc != 0
+
+mata: assert(spur_halflife_accept((0.09 \ 0.10 \ 0.11), 100, .90) == (0 \ 0 \ 1))
 
 display "SPUR Stata Rust tests passed."

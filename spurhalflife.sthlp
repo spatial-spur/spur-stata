@@ -21,6 +21,8 @@
 {synopt :{opt l:evel(#)}} specifies the desired confidence level in percent. The default is {opt level(95)}.{p_end}
 {synopt :{opt latlong}}specifies that the spatial coordinates are given in latitude (stored in {it:s_1}) and longitude (stored in {it:s_2}) (see below).{p_end}
 {synopt :{opt norm:dist}}specifies that the results are to be returned as fractions of the maximum pairwise distance in the sample.{p_end}
+{synopt:{opt backend(auto|rust|fallback)}}choose the computational backend. {opt auto} uses the matching Rust plugin when available and Mata otherwise. {opt rust} requires the matching plugin. Set the default with {cmd:SPATIAL_BACKEND} as a Stata global or environment variable.{p_end}
+{synopt:{opt nthreads(#)}}set the number of Rust threads. {opt nthreads(1)} runs Rust with one thread.{p_end}
 {synoptline}
 {p2colreset}{...}
 
@@ -85,9 +87,14 @@ Note: This command and all others in this package rely on the {cmd: moremata} pa
 
 {synoptset 20 tabbed}{...}
 {p2col 5 23 26 2: Scalars}{p_end}
+{synopt:{cmd:r(tied)}}indicator of a tied eigenspace reported by Rust{p_end}
 {synopt:{cmd:r(ci_l)}}Lower bound of the confidence interval{p_end}
-{synopt:{cmd:r(ci_U)}}Upper bound of the confidence interval{p_end}
+{synopt:{cmd:r(ci_u)}}Upper bound, missing for an unbounded or empty set{p_end}
+{synopt:{cmd:r(empty)}}indicator that no tested half-life was accepted{p_end}
 {synopt:{cmd:r(max_dist)}}Maximum pairwise distance in the sample, in coordinate units for Euclidean inputs or meters for geographic inputs{p_end}
+{p2col 5 23 26 2: Macros}{p_end}
+{synopt:{cmd:r(backend)}}computational backend used{p_end}
+{synopt:{cmd:r(backend_reason)}}reason for using Mata, when applicable{p_end}
 {p2colreset}{...}
 
 

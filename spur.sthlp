@@ -23,6 +23,8 @@
 {synopt :{opt uncond}}pass {opt uncond} to {cmd:scpc}{p_end}
 {synopt :{opt cvs}}pass {opt cvs} to {cmd:scpc} and store critical-value matrices{p_end}
 {synopt :{opt replace}}allow overwriting transformed variables named {it:h_*}{p_end}
+{synopt:{opt backend(auto|rust|fallback)}}choose the computational backend. {opt auto} uses the matching Rust plugin when available and Mata otherwise. {opt rust} requires the matching plugin. Set the default with {cmd:SPATIAL_BACKEND} as a Stata global or environment variable.{p_end}
+{synopt:{opt nthreads(#)}}set the number of Rust threads. {opt nthreads(1)} runs Rust with one thread.{p_end}
 {synoptline}
 {p2colreset}{...}
 
@@ -38,18 +40,17 @@ dependent and independent variables, estimates the transformed regression, and
 runs {cmd:scpc} again.
 
 {pstd}
-The wrapper is intended to mirror the R and Python {cmd:spur()} wrappers. It
-always computes both the levels and transformed branches. The practitioner
-decision rule is not encoded as a returned field.
+The wrapper uses observations with complete outcomes and regressors for all stages
+and uses the same seeded simulation draws for all four diagnostics. It always
+computes both the levels and transformed branches.
 
 {pstd}
 The transformed variables are written to the active dataset with prefix
 {it:h_}. Use {opt replace} if these variables already exist.
 
 {pstd}
-{cmd:scpc} is an external postestimation command from the Müller-Watson
-{cmd:SCPC} package. IV and fixed-effect workflows should be estimated directly
-and followed by {cmd:scpc}; they are not handled by this wrapper.
+{cmd:spur} requires the matching {cmd:scpc-stata} package. For IV and fixed-effect
+workflows, fit the Stata model and call {cmd:scpc} directly.
 
 
 {marker examples}{...}
@@ -68,6 +69,7 @@ and followed by {cmd:scpc}; they are not handled by this wrapper.
 
 {synoptset 28 tabbed}{...}
 {p2col 5 28 31 2: Scalars}{p_end}
+{synopt:{cmd:r(tied)}}indicator of a tied eigenspace reported by Rust{p_end}
 {synopt:{cmd:r(i0_teststat)}}I(0) diagnostic test statistic{p_end}
 {synopt:{cmd:r(i0_p)}}I(0) diagnostic p-value{p_end}
 {synopt:{cmd:r(i1_teststat)}}I(1) diagnostic test statistic{p_end}
@@ -89,6 +91,16 @@ and followed by {cmd:scpc}; they are not handled by this wrapper.
 {synopt:{cmd:r(transformed_scpccvs)}}transformed critical values, only when {opt cvs} is specified{p_end}
 
 {p2col 5 28 31 2: Macros}{p_end}
+{synopt:{cmd:r(backend)}}Rust if all stages used Rust, otherwise fallback{p_end}
+{synopt:{cmd:r(diagnostics_backend)}}computational backend for the four diagnostics{p_end}
+{synopt:{cmd:r(i0_backend)}}computational backend for the I(0) levels diagnostic{p_end}
+{synopt:{cmd:r(i1_backend)}}computational backend for the I(1) levels diagnostic{p_end}
+{synopt:{cmd:r(i0resid_backend)}}computational backend for the I(0) residual diagnostic{p_end}
+{synopt:{cmd:r(i1resid_backend)}}computational backend for the I(1) residual diagnostic{p_end}
+{synopt:{cmd:r(transform_backend)}}computational backend for the transformation{p_end}
+{synopt:{cmd:r(scpc_levels_backend)}}computational backend for SCPC in levels{p_end}
+{synopt:{cmd:r(scpc_transformed_backend)}}computational backend for transformed SCPC{p_end}
+{synopt:{cmd:r(*_backend_reason)}}reason for using Mata for each stage, when applicable{p_end}
 {synopt:{cmd:r(depvar)}}dependent variable{p_end}
 {synopt:{cmd:r(indepvars)}}independent variables{p_end}
 {synopt:{cmd:r(transformed_depvar)}}transformed dependent variable{p_end}

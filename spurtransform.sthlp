@@ -22,6 +22,8 @@
 {synopt :{opt latlong}}specifies that the spatial coordinates are given in latitude (stored in {it:s_1}) and longitude (stored in {it:s_2}) (see below).{p_end}
 {synopt :{opt r:eplace}}allows the command to overwrite variables when storing the transformed data.{p_end}
 {synopt :{opt separately}}executes the transformation separately for all variables in {it: varlist}.{p_end}
+{synopt:{opt backend(auto|rust|fallback)}}choose the computational backend. {opt auto} uses the matching Rust plugin when available and Mata otherwise. {opt rust} requires the matching plugin. Set the default with {cmd:SPATIAL_BACKEND} as a Stata global or environment variable.{p_end}
+{synopt:{opt nthreads(#)}}set the number of Rust threads. {opt nthreads(1)} runs Rust with one thread.{p_end}
 {synoptline}
 {p2colreset}{...}
 
@@ -99,6 +101,15 @@ See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv202
 {phang}{cmd:. spurtransform mpg weight length, prefix("h_")}{space 6}(applies transformation to all three variables){p_end}
 {phang}{cmd:. spurtransform mpg, prefix("h_") transformation(iso) radius(0.2)}{space 6}(applies isotropic transformation within radius of 0.2){p_end}
 
+
+{title:Stored results}
+
+{synoptset 20 tabbed}{...}
+{p2col 5 23 26 2: Macros}{p_end}
+{synopt:{cmd:r(backend)}}computational backend used{p_end}
+{synopt:{cmd:r(backend_reason)}}reason for using Mata, when applicable{p_end}
+{synopt:{cmd:r(transformation)}}transformation used{p_end}
+{p2colreset}{...}
 
 {marker authors}{...}
 {title:Authors}

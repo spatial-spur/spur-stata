@@ -16,11 +16,10 @@ program define spur, rclass sortpreserve
 			nthreads(integer -1) ///
 		]
 
-	// check scpc installed
-	cap which scpc
+	// The combined command needs the backend and result interface provided by scpc-stata.
+	capture scpc, capabilities
 	if _rc {
-		display as error in smcl `"Please install package {it:scpc} in order to use this command;"' _newline ///
-        `"which you can do so by clicking this link: {browse "https://github.com/ukmueller/SCPC/":SCPC}"'
+		di as error "spur requires a compatible scpc-stata build; install the matching scpc-stata checkout and restart Stata"
 		exit 199
 	}
 
@@ -68,13 +67,9 @@ program define spur, rclass sortpreserve
 		}
 	}
 
+	// Diagnostics, transformation, and both regressions use the same complete cases.
 	marksample touse_all
-	marksample touse_y, novarlist
-	qui replace `touse_y' = 0 if missing(`depvar')
-	qui count if `touse_y' != `touse_all'
-	local same_sample = (r(N) == 0)
-
-	local use_pipeline = (`plugin_ok' == 1 & "`req_backend'" != "fallback" & `same_sample' == 1)
+	local use_pipeline = (`plugin_ok' == 1 & "`req_backend'" != "fallback")
 
 	local scpc_options avc(`avc') k(`ncoef') backend(`req_backend') nthreads(`nthreads_arg')
 	if "`latlong'" != "" {
@@ -94,12 +89,18 @@ program define spur, rclass sortpreserve
 	tempname diagnostics
 
 	local diag_backend ""
+	local diag_reason ""
 	local diag_tied 0
+	local transform_ready 0
 
 	if `use_pipeline' == 1 {
 		_spur_backend check_coords, touse(`touse_all') `latlong' quiet
 		local slist "`r(slist)'"
 		local d = r(d)
+		if `q' >= r(n) {
+			di as error "q() must be smaller than the number of observations"
+			exit 198
+		}
 
 		local h_tmp_vars ""
 		local n_vars_tr = 1 + `k_x_raw'
@@ -127,13 +128,18 @@ program define spur, rclass sortpreserve
 			exit `rc'
 		}
 
+		local transform_ready 1
 		if "`req_backend'" == "auto" & scalar(`pipe_tied') == 1 {
 			local use_pipeline 0
 			local diag_tied 1
+			local diag_reason "tied eigenspace"
 		}
 		else {
 			local diag_backend "rust"
 			local diag_tied = scalar(`pipe_tied')
+			foreach diagnostic in i0 i1 i0r i1r {
+				local be_`diagnostic' "rust"
+			}
 
 			scalar `i0_teststat' = `pipe_diag'[1, 1]
 			scalar `i0_p' = `pipe_diag'[1, 2]
@@ -168,7 +174,7 @@ program define spur, rclass sortpreserve
 			local test_options `test_options' latlong
 		}
 
-		local transform_options prefix(`prefix') transformation(`transformation') backend(`indiv_backend') nthreads(`nthreads_arg')
+		local transform_options prefix(`prefix') transformation(`transformation') backend(`req_backend') nthreads(`nthreads_arg')
 		if "`latlong'" != "" {
 			local transform_options `transform_options' latlong
 		}
@@ -176,36 +182,40 @@ program define spur, rclass sortpreserve
 			local transform_options `transform_options' replace
 		}
 
-		quietly spurtest i0 `depvar' `if' `in', `test_options'
+		quietly spurtest i0 `depvar' if `touse_all', `test_options'
 		scalar `i0_teststat' = r(teststat)
 		scalar `i0_p' = r(p)
 		scalar `i0_ha_param' = r(ha_param)
 		matrix `i0_cv' = r(cv)
 		local be_i0 "`r(backend)'"
+		local reason_i0 "`r(backend_reason)'"
 		local ti_i0 = r(tied)
 
-		quietly spurtest i1 `depvar' `if' `in', `test_options'
+		quietly spurtest i1 `depvar' if `touse_all', `test_options'
 		scalar `i1_teststat' = r(teststat)
 		scalar `i1_p' = r(p)
 		scalar `i1_ha_param' = r(ha_param)
 		matrix `i1_cv' = r(cv)
 		local be_i1 "`r(backend)'"
+		local reason_i1 "`r(backend_reason)'"
 		local ti_i1 = r(tied)
 
-		quietly spurtest i0resid `depvar' `indepvars' `if' `in', `test_options'
+		quietly spurtest i0resid `depvar' `indepvars' if `touse_all', `test_options'
 		scalar `i0resid_teststat' = r(teststat)
 		scalar `i0resid_p' = r(p)
 		scalar `i0resid_ha_param' = r(ha_param)
 		matrix `i0resid_cv' = r(cv)
 		local be_i0r "`r(backend)'"
+		local reason_i0r "`r(backend_reason)'"
 		local ti_i0r = r(tied)
 
-		quietly spurtest i1resid `depvar' `indepvars' `if' `in', `test_options'
+		quietly spurtest i1resid `depvar' `indepvars' if `touse_all', `test_options'
 		scalar `i1resid_teststat' = r(teststat)
 		scalar `i1resid_p' = r(p)
 		scalar `i1resid_ha_param' = r(ha_param)
 		matrix `i1resid_cv' = r(cv)
 		local be_i1r "`r(backend)'"
+		local reason_i1r "`r(backend_reason)'"
 		local ti_i1r = r(tied)
 
 		matrix `diagnostics' = ///
@@ -221,11 +231,19 @@ program define spur, rclass sortpreserve
 		}
 		else {
 			local diag_backend "fallback"
+			foreach diagnostic in i0 i1 i0r i1r {
+				if `diag_tied' == 1 {
+					local reason_`diagnostic' "tied eigenspace"
+				}
+				else if "`diag_reason'" == "" {
+					local diag_reason "`reason_`diagnostic''"
+				}
+			}
 		}
 		local diag_tied = max(`diag_tied', `ti_i0', `ti_i1', `ti_i0r', `ti_i1r')
 	}
 
-	quietly regress `depvar' `indepvars' `if' `in', robust
+	quietly regress `depvar' `indepvars' if `touse_all', robust
 
 	tempname levels_N levels_r2 levels_r2_a
 	scalar `levels_N' = e(N)
@@ -240,6 +258,7 @@ program define spur, rclass sortpreserve
 		matrix `levels_scpccvs' = e(scpccvs)
 	}
 	local levels_scpc_be "`e(backend)'"
+	local levels_scpc_reason "`e(backend_reason)'"
 	local levels_scpc_tied = e(tied)
 
 	local transformed_depvar `prefix'`depvar'
@@ -248,8 +267,9 @@ program define spur, rclass sortpreserve
 		local transformed_indepvars `transformed_indepvars' `prefix'`var'
 	}
 
-	local tr_backend "`diag_backend'"
-	if `use_pipeline' == 1 {
+	local tr_reason ""
+	if `transform_ready' == 1 {
+		local tr_backend "rust"
 		forvalues j = 1/`n_vars_tr' {
 			local vname : word `j' of `varlist'
 			local hv : word `j' of `h_tmp_vars'
@@ -260,11 +280,12 @@ program define spur, rclass sortpreserve
 		}
 	}
 	else {
-		quietly spurtransform `depvar' `indepvars' `if' `in', `transform_options'
+		quietly spurtransform `depvar' `indepvars' if `touse_all', `transform_options'
 		local tr_backend "`r(backend)'"
+		local tr_reason "`r(backend_reason)'"
 	}
 
-	quietly regress `transformed_depvar' `transformed_indepvars' `if' `in', robust
+	quietly regress `transformed_depvar' `transformed_indepvars' if `touse_all', robust
 
 	tempname transformed_N transformed_r2 transformed_r2_a
 	scalar `transformed_N' = e(N)
@@ -279,6 +300,7 @@ program define spur, rclass sortpreserve
 		matrix `transformed_scpccvs' = e(scpccvs)
 	}
 	local tr_scpc_be "`e(backend)'"
+	local tr_scpc_reason "`e(backend_reason)'"
 	local tr_scpc_tied = e(tied)
 
 	local used_backend "fallback"
@@ -337,8 +359,22 @@ program define spur, rclass sortpreserve
 
 	return scalar tied = `any_tied'
 	return local backend "`used_backend'"
+	return local diagnostics_backend "`diag_backend'"
+	return local diagnostics_backend_reason "`diag_reason'"
+	return local i0_backend "`be_i0'"
+	return local i0_backend_reason "`reason_i0'"
+	return local i1_backend "`be_i1'"
+	return local i1_backend_reason "`reason_i1'"
+	return local i0resid_backend "`be_i0r'"
+	return local i0resid_backend_reason "`reason_i0r'"
+	return local i1resid_backend "`be_i1r'"
+	return local i1resid_backend_reason "`reason_i1r'"
+	return local transform_backend "`tr_backend'"
+	return local transform_backend_reason "`tr_reason'"
 	return local scpc_levels_backend "`levels_scpc_be'"
+	return local scpc_levels_backend_reason "`levels_scpc_reason'"
 	return local scpc_transformed_backend "`tr_scpc_be'"
+	return local scpc_transformed_backend_reason "`tr_scpc_reason'"
 	return local depvar "`depvar'"
 	return local indepvars "`indepvars'"
 	return local transformed_depvar "`transformed_depvar'"

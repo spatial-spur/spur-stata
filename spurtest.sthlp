@@ -43,6 +43,8 @@ Spatial I(0) test for residuals
 {synopt :{opt nrep(#)}}specifies the number of Monte Carlo draws to be used to simulate the distribution of the test statistic. The default is {opt nrep(100000)}.{p_end}
 {synopt :{opt seed(#)}}specifies the random seed used for the simulation draws. The default is {opt seed(42)}.{p_end}
 {synopt :{opt latlong}}specifies that the spatial coordinates are given in latitude (stored in {it:s_1}) and longitude (stored in {it:s_2}) (see below).{p_end}
+{synopt:{opt backend(auto|rust|fallback)}}choose the computational backend. {opt auto} uses the matching Rust plugin when available and Mata otherwise. {opt rust} requires the matching plugin. Set the default with {cmd:SPATIAL_BACKEND} as a Stata global or environment variable.{p_end}
+{synopt:{opt nthreads(#)}}set the number of Rust threads. {opt nthreads(1)} runs Rust with one thread.{p_end}
 {synoptline}
 {p2colreset}{...}
 
@@ -103,6 +105,7 @@ Note: This command and all others in this package rely on the {cmd: moremata} pa
 
 {synoptset 20 tabbed}{...}
 {p2col 5 23 26 2: Scalars}{p_end}
+{synopt:{cmd:r(tied)}}indicator of a tied eigenspace reported by Rust{p_end}
 {synopt:{cmd:r(teststat)}}Test statistic (LFUR or LFST){p_end}
 {synopt:{cmd:r(p)}}P-value of the test{p_end}
 {synopt:{cmd:r(ha_param)}}Parameter for alternative hypothesis (c_a or g_a). See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker, Boll and Voth (2026)} for details. {p_end}
@@ -110,6 +113,9 @@ Note: This command and all others in this package rely on the {cmd: moremata} pa
 {p2col 5 15 19 2: Matrices}{p_end}
 {synopt:{cmd:r(cv)}}Critical values at 1%, 5%, and 10% levels.{p_end}
 
+{p2col 5 23 26 2: Macros}{p_end}
+{synopt:{cmd:r(backend)}}computational backend used{p_end}
+{synopt:{cmd:r(backend_reason)}}reason for using Mata, when applicable{p_end}
 {p2colreset}{...}
 
 

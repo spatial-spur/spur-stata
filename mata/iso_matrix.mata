@@ -12,9 +12,9 @@ real matrix iso_matrix(real matrix s, real scalar b)
 	
 	external real scalar latlongflag
 	real matrix distmat
-	real matrix distmat_nozeros
 	real matrix dist_below_b
 	real matrix iso_mat
+	real scalar num_no_neighbors
 
 		
 	distmat = getdistmat(s) 
@@ -25,10 +25,7 @@ real matrix iso_matrix(real matrix s, real scalar b)
 	
 	stata("disp as text"+char(34)+"Sanity check: Distance between observations 1 and 2 is "+strofreal(distmat[1,2], "%9.0g")+", specified radius is "+strofreal(b, "%9.0g"))
 	
-	distmat_nozeros = distmat
-	distmat_nozeros = distmat_nozeros + (distmat_nozeros :== 0) :* 1e10
-
-	dist_below_b = distmat_nozeros :<= b
+	dist_below_b = (distmat :> 0) :& (distmat :<= b)
 
 	num_no_neighbors = sum(rowsum(dist_below_b) :== 0)
 

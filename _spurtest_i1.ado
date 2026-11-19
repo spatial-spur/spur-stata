@@ -14,6 +14,7 @@ program define _spurtest_i1, rclass sortpreserve
 	matrix `cv' = r(cv)
 	local tied_val = r(tied)
 	local used_backend "`r(backend)'"
+	local backend_reason "`r(backend_reason)'"
 
 	return scalar p = `p'
 	return scalar teststat = `teststat'
@@ -21,6 +22,7 @@ program define _spurtest_i1, rclass sortpreserve
 	return matrix cv = `cv'
 	return scalar tied = `tied_val'
 	return local backend "`used_backend'"
+	return local backend_reason "`backend_reason'"
 
 	// Display results
 	di as text "Spatial I(1) Test Results"

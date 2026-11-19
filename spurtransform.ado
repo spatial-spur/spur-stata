@@ -44,6 +44,7 @@ program spurtransform, rclass sortpreserve
 	local req_backend "`r(req_backend)'"
 	local nthreads_arg "`r(nthreads)'"
 	local plugin_ok = r(plugin_ok)
+	local backend_reason "`r(backend_reason)'"
 
 	// make numeric clustervar
 	tempvar clustervar
@@ -153,5 +154,6 @@ program spurtransform, rclass sortpreserve
 	}
 
 	return local backend "`used_backend'"
+	return local backend_reason "`backend_reason'"
 	return local transformation "`transformation'"
 end

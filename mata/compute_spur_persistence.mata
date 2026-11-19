@@ -8,6 +8,11 @@ struct struct_spatial_persistence {
 	real scalar hl_ci_upper
 }
 
+real colvector spur_halflife_accept(real colvector p, real scalar nrep, real scalar level) {
+    // Compare the complement count with level to keep equality excluded.
+    return(((nrep :- round(p :* nrep)) :/ nrep) :< level)
+}
+
 struct struct_spatial_persistence scalar spatial_persistence(real matrix Z, real matrix distmat, real matrix emat, real scalar level) {
 	
 	real scalar n_hl, n_hl_ha, n_hl_grid_ho, ci_l, ci_u
@@ -36,7 +41,7 @@ struct struct_spatial_persistence scalar spatial_persistence(real matrix Z, real
 	c_grid_ha = -log(0.5) :/ hl_grid_ha
 	
 	pv_mat=c_ci(Z_dm,distmat,emat,c_grid_ho,c_grid_ha)
-    ii = pv_mat :> 1 - level
+    ii = spur_halflife_accept(pv_mat, cols(emat), level)
     hl = select(hl_grid_ho,ii)
     ci_l = min(hl)
     ci_u = max(hl)
@@ -57,17 +62,16 @@ real matrix c_ci(real matrix Y, real matrix distmat, real matrix emat,
                  real vector c_grid_ho, real vector c_grid_ha) {
 				 	
     // Variable declarations
-    real scalar q, n, n_c_ho, n_c_ha, i, j
-    real scalar rho_bm, c, const_den, den_ho_X, den_ha_avg_X, lr_X, informative
-    real matrix sigdm_bm, R, lam, om, sigdm, omi, om_ref
-    real matrix ch_om_mat, ch_omi_mat, const_den_mat
+    real scalar q, n_c_ho, n_c_ha, i, j
+    real scalar rho_bm, c_bm, c, const_den, den_ho_X, den_ha_avg_X, lr_X, informative
+    real matrix sigdm_bm, R, om, sigdm, omi, om_ref
+    real matrix ch_null, ch_omi, ch_om_mat, ch_omi_mat, const_den_mat
     real matrix ch_omi_mat_ha, const_den_mat_ha
-    real matrix sz_vec, cv_mat, pv_mat, X, den_ho_X_mat, den_ha_avg_X_mat
-    real matrix e, xc, Xc, den_ho, den_ha_mat, den_ha_mat_X, lr, cvalue
+    real matrix pv_mat, X
+    real matrix e, xc, Xc, den_ho, den_ha_mat, den_ha_mat_X, den_ha_avg, lr
 
     // Initialization
     q = rows(emat)
-    n = rows(distmat)
     n_c_ho = length(c_grid_ho)
     n_c_ha = length(c_grid_ha)
     if (q < 2) {
@@ -109,7 +113,6 @@ real matrix c_ci(real matrix Y, real matrix distmat, real matrix emat,
 
     for (i = 1; i <= n_c_ho; i++) {
         c = c_grid_ho[i]
-        //om = I(q)
         sigdm = get_sigma_dm(distmat, c)
         om = R' * sigdm * R
 		asarray(ch_om_mat, i, cholesky(om)')
@@ -124,7 +127,6 @@ real matrix c_ci(real matrix Y, real matrix distmat, real matrix emat,
 
     for (i = 1; i <= n_c_ha; i++) {
         c = c_grid_ha[i]
-        //om = I(q)
         sigdm = get_sigma_dm(distmat, c)
         om = R' * sigdm * R
         omi = invsym(om)
@@ -132,12 +134,8 @@ real matrix c_ci(real matrix Y, real matrix distmat, real matrix emat,
         const_den_mat_ha[i,1] = sqrt(det(omi)) * 0.5 * gamma(q / 2) / (pi()^(q / 2))
     }
 
-    // Construct critical values and p-value matrices
-	sz_vec = (0.10, 0.05, 0.01)
-    cv_mat = J(length(sz_vec), n_c_ho, .)
+    // Compare simulated likelihood ratios with the observed ratio.
     pv_mat = J(n_c_ho, 1, .)
-    den_ho_X_mat = J(n_c_ho, 1, .)
-    den_ha_avg_X_mat = J(n_c_ho, 1, .)
 
     for (i = 1; i <= n_c_ho; i++) {
 		ch_null = asarray(ch_om_mat,i)
@@ -164,13 +162,9 @@ real matrix c_ci(real matrix Y, real matrix distmat, real matrix emat,
 	
         den_ha_avg = mean(den_ha_mat')'
         lr = den_ha_avg :/ den_ho
-		cvalue = spur_quantile(lr, (1 :- sz_vec'))
-        cv_mat[.,i] = cvalue
         den_ha_avg_X = mean(den_ha_mat_X)'
         lr_X = den_ha_avg_X / den_ho_X
         pv_mat[i,1] = mean(lr :> lr_X)
-        den_ha_avg_X_mat[i,1] = den_ha_avg_X
-        den_ho_X_mat[i,1] = den_ho_X
 		
 		
     }

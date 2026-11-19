@@ -24,9 +24,17 @@ variables named `s_*`.
 
 ### Dependencies
 
-- `moremata` is required by the SPUR commands
+- `moremata` is required by the Mata fallback
 - `scpc` is a separate Stata package and handles the inference stage after the
   branch has been chosen
+
+### Backend Controls
+
+Each command accepts `backend(auto|rust|fallback)` and `nthreads(#)`.
+The default backend comes from the Stata global or environment variable
+`SPATIAL_BACKEND`, or `auto` when neither is set. Automatic mode uses the
+matching Rust plugin when available. Explicit `backend(rust)` requires
+the matching plugin. Use `nthreads(1)` for single-threaded Rust.
 
 ### Simulation Controls
 
@@ -45,7 +53,7 @@ Run the full SPUR workflow for a linear regression.
 **Syntax**
 
 ```stata
-spur depvar indepvars [if] [in] [, q(#) nrep(#) seed(#) latlong avc(#) uncond cvs replace]
+spur depvar indepvars [if] [in] [, q(#) nrep(#) seed(#) latlong avc(#) uncond cvs replace backend(auto|rust|fallback) nthreads(#)]
 ```
 
 **Behavior**
@@ -59,14 +67,16 @@ spur depvar indepvars [if] [in] [, q(#) nrep(#) seed(#) latlong avc(#) uncond cv
 - estimates the transformed regression with `regress ..., robust`
 - runs `scpc` again
 
-The wrapper always computes both the levels and transformed branches. It does
-not encode the practitioner-guide branch decision as a returned field.
+The wrapper computes both the levels and transformed branches on the same
+complete-case regression sample. The guide explains how to choose the branch
+based on the diagnostic results.
 
 **Options**
 
 - `q(#)`, `nrep(#)`, `seed(#)`, `latlong`: passed to the SPUR diagnostic tests
 - `avc(#)`, `uncond`, `cvs`: passed to `scpc`
 - `replace`: allow overwriting existing transformed `h_*` variables
+- `backend(auto|rust|fallback)`, `nthreads(#)`: see Backend Controls
 
 **Stored results**
 
@@ -79,6 +89,8 @@ not encode the practitioner-guide branch decision as a returned field.
   regression
 - `r(levels_scpccvs)` and `r(transformed_scpccvs)`: critical-value matrices
   when `cvs` is specified
+- `r(tied)`: indicator of numerically tied eigenspaces
+- `r(backend)`, `r(diagnostics_backend)`, `r(i0_backend)`, `r(i1_backend)`, `r(i0resid_backend)`, `r(i1resid_backend)`, `r(transform_backend)`, `r(scpc_levels_backend)`, `r(scpc_transformed_backend)` and matching `*_backend_reason` locals
 - diagnostic scalar aliases such as `r(i0_p)` and `r(i1resid_teststat)`
 - model-statistic scalars such as `r(levels_N)` and `r(transformed_r2)`
 
@@ -99,6 +111,8 @@ spurtest i0 varname [if] [in] [, q(#) nrep(#) seed(#) latlong]
 spurtest i1resid depvar [indepvars] [if] [in] [, q(#) nrep(#) seed(#) latlong]
 spurtest i0resid depvar [indepvars] [if] [in] [, q(#) nrep(#) seed(#) latlong]
 ```
+
+All subcommands also accept the backend controls.
 
 **Subcommands**
 
@@ -123,6 +137,8 @@ spurtest i0resid depvar [indepvars] [if] [in] [, q(#) nrep(#) seed(#) latlong]
 - `r(p)`: p-value
 - `r(ha_param)`: alternative-hypothesis parameter (`c_a` or `g_a`)
 - `r(cv)`: matrix of critical values at 1%, 5%, and 10%
+- `r(tied)`: indicator of numerically tied eigenspaces
+- `r(backend)` and `r(backend_reason)`: backend used and reason for any fallback
 
 The residual tests automatically include a constant in the underlying
 regression.
@@ -138,7 +154,8 @@ the current dataset.
 
 ```stata
 spurtransform varlist [if] [in], prefix(string) ///
-    [transformation(string) radius(#) clustvar(varname) latlong replace separately]
+    [transformation(string) radius(#) clustvar(varname) latlong replace separately ///
+    backend(auto|rust|fallback) nthreads(#)]
 ```
 
 **Required option**
@@ -166,7 +183,7 @@ spurtransform varlist [if] [in], prefix(string) ///
 
 - the command transforms every variable in `varlist`
 - transformed variables are written back into the active dataset
-- there are no stored results; the output is the newly created variables
+- stores `r(backend)`, `r(backend_reason)`, and `r(transformation)`
 
 ## Persistence
 
@@ -177,7 +194,8 @@ Estimate a confidence interval for the spatial half-life of a variable.
 **Syntax**
 
 ```stata
-spurhalflife varname [if] [in] [, q(#) nrep(#) seed(#) level(#) latlong normdist]
+spurhalflife varname [if] [in] [, q(#) nrep(#) seed(#) level(#) latlong normdist ///
+    backend(auto|rust|fallback) nthreads(#)]
 ```
 
 **Options**
@@ -194,9 +212,12 @@ spurhalflife varname [if] [in] [, q(#) nrep(#) seed(#) level(#) latlong normdist
 
 `spurhalflife` stores the following in `r()`:
 
-- `r(ci_l)`: lower interval bound
-- `r(ci_u)`: upper interval bound
+- `r(ci_l)`: lower interval bound (missing if confidence set is empty)
+- `r(ci_u)`: upper interval bound (missing if unbounded or empty)
 - `r(max_dist)`: maximum pairwise distance in the sample
+- `r(empty)`: `1` when the confidence set is empty, `0` otherwise
+- `r(tied)`: indicator of numerically tied eigenspaces
+- `r(backend)` and `r(backend_reason)`: computational backend used and fallback reason when applicable
 
 If `normdist` is not specified, the interval is reported in metres under
 `latlong`, or in the units of the Euclidean coordinates otherwise.

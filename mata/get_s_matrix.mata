@@ -5,15 +5,16 @@ mata
 real matrix get_s_matrix(string scalar touse, string scalar latlong)
 {
 	real matrix s
-    real scalar ns
+    real scalar ns, i, slist_len
+	string colvector slist
+	real colvector slist_nums, slist_order
 	external real scalar latlongflag
 		
 	// FIX BUG WITH COORDINATE VARIABLE ORDERING --------------------------
 	
 	stata("unab slist: s_*")  // create local macro slist containing a list of all s_* variables
 
-	slist = st_local("slist") // import to mata
-	slist = tokens(slist)' // tokenize list into vector
+	slist = tokens(st_local("slist"))'
 	slist_nums = strtoreal(substr(slist,3,.)) // extract numbers for sorting
 	slist_order = order(slist_nums,1) // extract numerical order (alphabetical order would be incorrect for d>9)
 	slist = slist[slist_order] // re-order elements of slist

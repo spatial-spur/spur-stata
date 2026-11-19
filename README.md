@@ -24,6 +24,28 @@ Then, you can run the example do-file, which reproduces Table 1 from [Müller & 
 
     . do example
 
+### Local development checkout
+
+Install the matching SCPC checkout before using the combined `spur` command.
+
+```stata
+net install scpc, replace from("/path/to/spatial-spur/scpc-stata/src")
+net install spur, replace from("/path/to/spatial-spur/spur-stata")
+```
+
+The checked-in development plugin targets macOS arm64 and was tested with
+StataNow 19.5. Build both plugins with
+`make -C spatial-rust/crates/spatial-stata` from the shared workspace
+after fetching the locked Cargo dependencies. The Makefile has macOS and Linux
+targets. To rebuild the Mata library, run `stata-se -b do mata/build_lspur.do`
+from the SPUR checkout in a fresh session.
+
+Restart Stata after replacing a plugin. The default `backend(auto)` uses Mata
+if a matching plugin cannot load. You can select Mata with `backend(fallback)`
+and install its dependency with `ssc install moremata`. Check `r(backend)` and
+`r(backend_reason)` after standalone commands. The combined `spur` command
+records the backend and fallback reason for each stage.
+
 ## Basic Usage
 
 The package includes one wrapper `spur` implementing the whole workflow, and the individual commands `spurtest`, `spurtransform`, and `spurhalflife`. Example uses of these commands:.
