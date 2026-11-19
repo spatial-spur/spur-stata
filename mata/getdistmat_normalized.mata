@@ -9,9 +9,15 @@ real matrix getdistmat_normalized(real matrix s)
 
 	external real scalar latlongflag
 	real matrix distmat
+	real scalar max_d
 	
 	distmat = getdistmat(s)
-	distmat = distmat / max(distmat)
+	max_d = max(distmat)
+	if (max_d <= 0 | max_d >= .) {
+		errprintf("all coordinates are identical; normalization requires distinct locations\n")
+		exit(198)
+	}
+	distmat = distmat :/ max_d
 	
 	return(distmat)
 }	

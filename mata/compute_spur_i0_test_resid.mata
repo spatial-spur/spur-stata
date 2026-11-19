@@ -167,7 +167,7 @@ struct struct_spatial_i0_test_residual scalar spatial_i0_test_residual(real matr
 	
 	
 	// Struct output
-     struct struct_spatial_i0_test scalar SP
+     struct struct_spatial_i0_test_residual scalar SP
      SP.LR = LR
      SP.pvalue = pvalue
      SP.cvalue = cvalue

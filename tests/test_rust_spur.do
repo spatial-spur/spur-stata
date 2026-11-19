@@ -640,6 +640,8 @@ foreach backend in fallback rust {
     assert _rc != 0
     capture spurhalflife y, q(1) nrep(99) seed(42) backend(`backend')
     assert _rc == 198
+    capture spur y x, q(1) nrep(99) seed(42) backend(`backend')
+    assert _rc == 198
     spurhalflife y, q(4) nrep(99) seed(42) normdist backend(`backend')
     local lower = r(ci_l)
     assert abs(r(max_dist) - 29) < 1e-10

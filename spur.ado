@@ -24,8 +24,8 @@ program define spur, rclass sortpreserve
 		exit 199
 	}
 
-	if `q' < 1 {
-		di as error "q() must be at least 1"
+	if `q' < 2 {
+		di as error "q() must be at least 2"
 		exit 198
 	}
 	if `nrep' < 1 {
