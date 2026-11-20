@@ -7,7 +7,7 @@ d Becker, Boll and Voth (2026).
 d 
 d Requires: Stata version 14 
 d
-d Development checkout. The bundled Rust plugin targets Apple Silicon.
+d Development checkout. The bundled Rust plugin uses OxiBLAS on Apple Silicon.
 d
 d Authors: Sascha O. Becker, P. David Boll, Hans-Joachim Voth
 d
@@ -28,6 +28,7 @@ f _spurtest_i0resid.ado
 f _spur_backend.ado
 g MACARM64 spur_rust.plugin
 g OSX.ARM64 spur_rust.plugin
+F spur-oxiblas-license.txt
 f lspur.mlib
 f example.do 
 f example_data/Chetty_Data_1.xlsx

@@ -33,6 +33,9 @@ net install scpc, replace from("/path/to/spatial-spur/scpc-stata/src")
 net install spur, replace from("/path/to/spatial-spur/spur-stata")
 ```
 
+The Rust plugins use OxiBLAS through the shared Rust core.
+The [OxiBLAS license](spur-oxiblas-license.txt) is included in the installation.
+
 The development checkout bundles plugins for Apple Silicon, tested with
 StataNow 19.5. `net install` installs the plugins on Apple Silicon and the
 Mata implementations on all platforms. Build both plugins with
