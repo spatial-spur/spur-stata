@@ -41,7 +41,9 @@ StataNow 19.5. `net install` installs the plugins on Apple Silicon and the
 Mata implementations on all platforms. Build both plugins with
 `make -C spatial-rust/crates/spatial-stata` from the shared workspace
 after fetching the locked Cargo dependencies. The Makefile has macOS and Linux
-targets. Use `adopath ++` with the `scpc-stata/src` and `spur-stata` directories
+targets. Set `SPATIAL_SME2=1` when running `make` to include OxiBLAS's optional
+SME2 kernels, which activate on supported hardware. SME2 is off in the standard
+build. Use `adopath ++` with the `scpc-stata/src` and `spur-stata` directories
 to load locally built plugins from your checkouts, then run
 `mata: mata mlib index` to index the SPUR Mata library. To rebuild that library,
 run `stata-se -b do mata/build_lspur.do` from the SPUR checkout in a fresh session.
