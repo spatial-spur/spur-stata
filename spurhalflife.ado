@@ -44,7 +44,6 @@ program define spurhalflife, rclass sortpreserve
 	local tied_val 0
 
 	if "`req_backend'" == "fallback" | `plugin_ok' == 0 {
-		_spur_backend check_moremata
 		set seed `seed'
 		_spur_backend mata_halflife, yvar(`varlist') touse(`touse') `latlong' q(`q') nrep(`nrep') ///
 			level(`level') cil(`ci_l') ciu(`ci_u') maxdist(`max_dist')
@@ -65,7 +64,6 @@ program define spurhalflife, rclass sortpreserve
 		}
 
 		if "`req_backend'" == "auto" & scalar(`tied_scal') == 1 {
-			_spur_backend check_moremata
 			set seed `seed'
 			_spur_backend mata_halflife, yvar(`varlist') touse(`touse') `latlong' q(`q') nrep(`nrep') ///
 				level(`level') cil(`ci_l') ciu(`ci_u') maxdist(`max_dist')

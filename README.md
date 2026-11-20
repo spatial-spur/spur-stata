@@ -33,18 +33,20 @@ net install scpc, replace from("/path/to/spatial-spur/scpc-stata/src")
 net install spur, replace from("/path/to/spatial-spur/spur-stata")
 ```
 
-The checked-in development plugin targets macOS arm64 and was tested with
-StataNow 19.5. Build both plugins with
+The development checkout bundles plugins for Apple Silicon, tested with
+StataNow 19.5. `net install` installs the plugins on Apple Silicon and the
+Mata implementations on all platforms. Build both plugins with
 `make -C spatial-rust/crates/spatial-stata` from the shared workspace
 after fetching the locked Cargo dependencies. The Makefile has macOS and Linux
-targets. To rebuild the Mata library, run `stata-se -b do mata/build_lspur.do`
-from the SPUR checkout in a fresh session.
+targets. Use `adopath ++` with the `scpc-stata/src` and `spur-stata` directories
+to load locally built plugins from your checkouts, then run
+`mata: mata mlib index` to index the SPUR Mata library. To rebuild that library,
+run `stata-se -b do mata/build_lspur.do` from the SPUR checkout in a fresh session.
 
 Restart Stata after replacing a plugin. The default `backend(auto)` uses Mata
-if a matching plugin cannot load. You can select Mata with `backend(fallback)`
-and install its dependency with `ssc install moremata`. Check `r(backend)` and
-`r(backend_reason)` after standalone commands. The combined `spur` command
-records the backend and fallback reason for each stage.
+if a matching plugin cannot load. You can select Mata with `backend(fallback)`.
+Check `r(backend)` and `r(backend_reason)` after standalone commands. The
+combined `spur` command records the backend and fallback reason for each stage.
 
 ## Basic Usage
 

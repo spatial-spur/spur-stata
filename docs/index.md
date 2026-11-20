@@ -14,6 +14,8 @@ Müller and Watson.
 
 ## Installation
 
+The installation commands below are for the archived v0.1.1 release.
+
 ```stata
 ssc install moremata, replace
 net install spur, replace from(https://raw.githubusercontent.com/spatial-spur/spur-stata/v0.1.1/)

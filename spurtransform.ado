@@ -75,7 +75,6 @@ program spurtransform, rclass sortpreserve
 
 	local used_backend ""
 	if "`req_backend'" == "fallback" | `plugin_ok' == 0 {
-		_spur_backend check_moremata
 		local used_backend "fallback"
 	}
 	else {

@@ -78,16 +78,6 @@ program define _spur_backend, rclass
         exit
     }
 
-    if "`subcmd'" == "check_moremata" {
-        cap which moremata.hlp
-        if _rc {
-            display as error in smcl `"Please install package {it:moremata} from SSC in order to use this command;"' _newline ///
-            `"you can do so by clicking this link: {stata "ssc install moremata, replace":auto-install moremata}"'
-            exit 199
-        }
-        exit
-    }
-
     if "`subcmd'" == "check_coords" {
         local 0 `"`rest'"'
         syntax , touse(varname) [latlong quiet]
@@ -254,7 +244,6 @@ program define _spur_backend, rclass
         local tied_val 0
 
         if "`req_backend'" == "fallback" | `plugin_ok' == 0 {
-            _spur_backend check_moremata
             set seed `seed'
             _spur_backend mata_test, flavor(`flavor') yvar(`yvar') xvars(`xvars') touse(`touse') `latlong' ///
                 q(`q') nrep(`nrep') pmat(`p') statscal(`teststat') hascal(`ha') cvmat(`cv')
@@ -279,7 +268,6 @@ program define _spur_backend, rclass
             }
 
             if "`req_backend'" == "auto" & scalar(`tied_scal') == 1 {
-                _spur_backend check_moremata
                 set seed `seed'
                 _spur_backend mata_test, flavor(`flavor') yvar(`yvar') xvars(`xvars') touse(`touse') `latlong' ///
                     q(`q') nrep(`nrep') pmat(`p') statscal(`teststat') hascal(`ha') cvmat(`cv')

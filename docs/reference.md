@@ -24,7 +24,6 @@ variables named `s_*`.
 
 ### Dependencies
 
-- `moremata` is required by the Mata fallback
 - `scpc` is a separate Stata package and handles the inference stage after the
   branch has been chosen
 
@@ -90,7 +89,10 @@ based on the diagnostic results.
 - `r(levels_scpccvs)` and `r(transformed_scpccvs)`: critical-value matrices
   when `cvs` is specified
 - `r(tied)`: indicator of numerically tied eigenspaces
-- `r(backend)`, `r(diagnostics_backend)`, `r(i0_backend)`, `r(i1_backend)`, `r(i0resid_backend)`, `r(i1resid_backend)`, `r(transform_backend)`, `r(scpc_levels_backend)`, `r(scpc_transformed_backend)` and matching `*_backend_reason` locals
+- `r(backend)` summarizes backend use across stages. `r(diagnostics_backend)`,
+  `r(i0_backend)`, `r(i1_backend)`, `r(i0resid_backend)`, `r(i1resid_backend)`,
+  `r(transform_backend)`, `r(scpc_levels_backend)` and `r(scpc_transformed_backend)`
+  have matching `*_backend_reason` locals.
 - diagnostic scalar aliases such as `r(i0_p)` and `r(i1resid_teststat)`
 - model-statistic scalars such as `r(levels_N)` and `r(transformed_r2)`
 

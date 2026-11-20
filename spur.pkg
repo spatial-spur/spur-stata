@@ -7,7 +7,7 @@ d Becker, Boll and Voth (2026).
 d 
 d Requires: Stata version 14 
 d
-d Distribution Date: 20250121
+d Development checkout. The bundled Rust plugin targets Apple Silicon.
 d
 d Authors: Sascha O. Becker, P. David Boll, Hans-Joachim Voth
 d
@@ -26,7 +26,8 @@ f _spurtest_i0.ado
 f _spurtest_i1resid.ado
 f _spurtest_i0resid.ado
 f _spur_backend.ado
-f spur_rust.plugin
+g MACARM64 spur_rust.plugin
+g OSX.ARM64 spur_rust.plugin
 f lspur.mlib
 f example.do 
 f example_data/Chetty_Data_1.xlsx

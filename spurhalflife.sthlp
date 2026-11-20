@@ -46,7 +46,6 @@ If the option {opt latlong} is specified, {it:s_1} is interpreted as latitude an
 If the option is not specified, the {it:p} {it:s_*} variables present are interpreted as coordinates in {it:p}−dimensional Euclidean space. This is appropriate for projected coordinates.
 
 {pstd}
-Note: This command and all others in this package rely on the {cmd: moremata} package by Ben Jann, which can be installed from SSC: {stata "ssc install moremata, replace":auto-install moremata}.
 
 
 {marker options}{...}

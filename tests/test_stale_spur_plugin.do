@@ -11,6 +11,7 @@ if `"`scpc_dir'"' != "" {
 else {
     capture adopath ++ "scpc-stata/src"
 }
+mata: mata mlib index
 program _spur_rust_plugin, plugin using(`"`oldplugin'"')
 plugin call _spur_rust_plugin, ping_spur_v1
 capture plugin call _spur_rust_plugin, ping_spur_v3

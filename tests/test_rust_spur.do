@@ -9,6 +9,7 @@ args repo_root
 if `"`repo_root'"' == "" local repo_root "."
 adopath ++ "`repo_root'/scpc-stata/src"
 adopath ++ "`repo_root'/spur-stata"
+mata: mata mlib index
 
 // Verify first loading SCPC preserves the calling session's Mata state.
 mata: s = (2, 3)
