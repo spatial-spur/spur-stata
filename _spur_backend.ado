@@ -364,7 +364,7 @@ program define _spur_backend, rclass
             mata: st_numscalar("`cil'", _sp_t_r.hl_ci_lower)
             mata: st_numscalar("`ciu'", _sp_t_r.hl_ci_upper)
             if "`latlong'" != "" {
-                mata: st_numscalar("`maxdist'", max(getdistmat(_sp_t_s)) * 3.14159265359 * 6371000.009 * 2)
+                mata: st_numscalar("`maxdist'", max(getdistmat(_sp_t_s)) * 2 * pi() * 6371000.009)
             }
             else {
                 mata: st_numscalar("`maxdist'", max(getdistmat(_sp_t_s)))

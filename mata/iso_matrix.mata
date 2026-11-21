@@ -20,7 +20,7 @@ real matrix iso_matrix(real matrix s, real scalar b)
 	distmat = getdistmat(s) 
 	
 	if(latlongflag==1) {
-		distmat = distmat * 3.14159265359 * 6371000.009 * 2 // great circle distance
+		distmat = distmat * 2 * pi() * 6371000.009 // great circle distance
 	}
 	
 	stata("disp as text"+char(34)+"Sanity check: Distance between observations 1 and 2 is "+strofreal(distmat[1,2], "%9.0g")+", specified radius is "+strofreal(b, "%9.0g"))

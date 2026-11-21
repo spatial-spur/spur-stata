@@ -59,16 +59,16 @@ If the option is not specified, the {it:p} {it:s_*} variables present are interp
 {opt transformation(string)} specifies the type of transformation. Must be one of {opt nn}, {opt iso}, {opt cluster}, {opt lbmgls}. Defaults to {opt lbmgls}.
 
 {phang2}
-{opt transformation(nn)} requests the Nearest-Neighbor transformation, i.e. differencing with respect to each observation's nearest neighbor.
+{opt transformation(nn)} differences each observation from the average of its neighbors tied at the smallest positive distance. It requires at least two distinct locations.
 
 {phang2}
-{opt transformation(iso)} requests the Isotropic transformation, i.e. differencing with respect to an unweighted average of all (other) observations within a {opt radius} meter radius.
+{opt transformation(iso)} differences each observation from the average of neighbors at positive distances up to and including {opt radius}. An observation with no such neighbors transforms to zero.
 
 {phang2}
 {opt transformation(cluster)} requests the Cluster transformation, i.e. unweighted demeaning within a cluster of observations, where the cluster variable is specified by {opt clustvar}.
 
 {phang2}
-{opt transformation(lbmgls)} requests the LBM-GLS transformation, i.e. GLS transformation based on the covariance matrix of a Lévy-Brownian motion. This is the default option.
+{opt transformation(lbmgls)} requests the LBM-GLS transformation, i.e. GLS transformation based on the covariance matrix of a Lévy-Brownian motion. Each transformed column is centered. This is the default option.
 
 {phang2}
 See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker, Boll and Voth (2026)} for details.
@@ -77,7 +77,7 @@ See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv202
 {opt radius(#)} specifies the radius in metres (if {opt latlong}), or in the units of the original coordinates (if not {opt latlong}), which is to be used for isotropic differencing. Only allowed with {opt transformation(iso)}.
 
 {phang}
-{opt cluster(varname)} specifies the variable that is to be used for clustering. Only allowed with {opt transformation(cluster)}.
+{opt clustvar(varname)} specifies the variable that is to be used for clustering. Only allowed with {opt transformation(cluster)}.
 
 {phang}
 {opt latlong} specifies that the spatial coordinates are given in latitude (stored in {it:s_1}) and longitude (stored in {it:s_2}) (see above).

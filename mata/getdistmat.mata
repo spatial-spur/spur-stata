@@ -27,13 +27,13 @@ real matrix getdistmat(real matrix s)
 	}
 	else
 		{
-		c=3.14159265359/180
+		c=pi()/180
 		for(i=1;i<=n;i++){
 			d=(.5*c)*(s:-s[i,.])
 			rad = sin(d[.,1]):^2 + cos(c*s[i,1])*(cos(c*s[.,1]):*(sin(d[.,2]):^2))
 			rad = rad :* (rad :> 0)
 			rad = rad :* (rad :<= 1) :+ (rad :> 1)
-			mat[.,i] = asin(sqrt(rad))/3.14159265359
+			mat[.,i] = asin(sqrt(rad))/pi()
 		}
 	}	
 	if (hasmissing(mat)) {
