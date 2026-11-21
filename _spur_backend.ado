@@ -170,6 +170,7 @@ program define _spur_backend, rclass
             mata: fclose(_sp_e_fh)
         }
         local rc = _rc
+        if `rc' != 0 capture mata: fclose(_sp_e_fh)
         capture mata: mata drop _sp_e_E _sp_e_fh _sp_e_C
         if `rc' != 0 {
             exit `rc'

@@ -11,7 +11,7 @@ d Development checkout. The bundled Rust plugin targets Apple Silicon.
 d
 d Authors: Sascha O. Becker, P. David Boll, Hans-Joachim Voth
 d
-d Support: post an issue under https://github.com/pdavidboll/SPUR/issues
+d Support: post an issue under https://github.com/spatial-spur/spur-stata/issues
 d
 f spurtest.ado
 f spurtest.sthlp
@@ -26,6 +26,7 @@ f _spurtest_i0.ado
 f _spurtest_i1resid.ado
 f _spurtest_i0resid.ado
 f _spur_backend.ado
+F spur_licenses.txt
 g MACARM64 spur_rust.plugin
 g OSX.ARM64 spur_rust.plugin
 f lspur.mlib

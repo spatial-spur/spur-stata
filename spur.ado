@@ -128,13 +128,13 @@ program define spur, rclass sortpreserve
 			exit `rc'
 		}
 
-		local transform_ready 1
 		if "`req_backend'" == "auto" & scalar(`pipe_tied') == 1 {
 			local use_pipeline 0
 			local diag_tied 1
 			local diag_reason "tied eigenspace"
 		}
 		else {
+			local transform_ready 1
 			local diag_backend "rust"
 			local diag_tied = scalar(`pipe_tied')
 			foreach diagnostic in i0 i1 i0r i1r {
@@ -174,7 +174,7 @@ program define spur, rclass sortpreserve
 			local test_options `test_options' latlong
 		}
 
-		local transform_options prefix(`prefix') transformation(`transformation') backend(`req_backend') nthreads(`nthreads_arg')
+		local transform_options prefix(`prefix') transformation(`transformation') backend(`indiv_backend') nthreads(`nthreads_arg')
 		if "`latlong'" != "" {
 			local transform_options `transform_options' latlong
 		}

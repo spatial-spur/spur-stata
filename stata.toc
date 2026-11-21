@@ -1,2 +1,2 @@
 v 3
-p Spatial Unit Roots in Regressions
+p spur Spatial Unit Roots in Regressions

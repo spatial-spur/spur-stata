@@ -60,15 +60,15 @@ struct struct_spatial_persistence scalar spatial_persistence(real matrix Z, real
 
 real matrix c_ci(real matrix Y, real matrix distmat, real matrix emat, 
                  real vector c_grid_ho, real vector c_grid_ha) {
-				 	
+
     // Variable declarations
     real scalar q, n_c_ho, n_c_ha, i, j
-    real scalar rho_bm, c_bm, c, const_den, den_ho_X, den_ha_avg_X, lr_X, informative
+    real scalar rho_bm, c_bm, c, log_det_ho, log_ho_X, log_lr_X, informative, m_x, q_x
     real matrix sigdm_bm, R, om, sigdm, omi, om_ref
-    real matrix ch_null, ch_omi, ch_om_mat, ch_omi_mat, const_den_mat
-    real matrix ch_omi_mat_ha, const_den_mat_ha
+    real matrix ch_null, ch_omi, ch_om_mat, ch_omi_mat, log_det_mat
+    real matrix ch_omi_mat_ha, log_det_mat_ha
     real matrix pv_mat, X
-    real matrix e, xc, Xc, den_ho, den_ha_mat, den_ha_mat_X, den_ha_avg, lr
+    real matrix e, xc, Xc, log_ho, log_ha_mat, log_ha_mat_X, log_lr, m_row, q_e
 
     // Initialization
     q = rows(emat)
@@ -78,10 +78,9 @@ real matrix c_ci(real matrix Y, real matrix distmat, real matrix emat,
         errprintf("half-life inference requires q >= 2 weighted directions\n")
         exit(198)
     }
-    
 
     // BM covariance matrix
-	rho_bm = 0.999
+    rho_bm = 0.999
     c_bm = getcbar(rho_bm, distmat)
     sigdm_bm = get_sigma_dm(distmat, c_bm)
 
@@ -107,72 +106,88 @@ real matrix c_ci(real matrix Y, real matrix distmat, real matrix emat,
     }
 
     // Compute Omega matrices for c_grid_ho
-    ch_om_mat = asarray_create("real",1)
-    ch_omi_mat = asarray_create("real",1)
-    const_den_mat = J(n_c_ho, 1, .)
+    ch_om_mat = asarray_create("real", 1)
+    ch_omi_mat = asarray_create("real", 1)
+    log_det_mat = J(n_c_ho, 1, .)
 
     for (i = 1; i <= n_c_ho; i++) {
         c = c_grid_ho[i]
         sigdm = get_sigma_dm(distmat, c)
         om = R' * sigdm * R
-		asarray(ch_om_mat, i, cholesky(om)')
+        om = 0.5 * (om + om')
+        asarray(ch_om_mat, i, cholesky(om)')
         omi = invsym(om)
-		asarray(ch_omi_mat, i, cholesky(omi)')
-        const_den_mat[i,1] = sqrt(det(omi)) * 0.5 * gamma(q / 2) / (pi()^(q / 2))
+        ch_omi = cholesky(omi)'
+        asarray(ch_omi_mat, i, ch_omi)
+        log_det_mat[i, 1] = sum(ln(diagonal(ch_omi)))
     }
 
     // Compute Omega matrices for c_grid_ha
-	ch_omi_mat_ha = asarray_create("real",1)
-    const_den_mat_ha = J(n_c_ha, 1, .)
+    ch_omi_mat_ha = asarray_create("real", 1)
+    log_det_mat_ha = J(n_c_ha, 1, .)
+    log_ha_mat_X = J(n_c_ha, 1, .)
 
     for (i = 1; i <= n_c_ha; i++) {
         c = c_grid_ha[i]
         sigdm = get_sigma_dm(distmat, c)
         om = R' * sigdm * R
-        omi = invsym(om)
-		asarray(ch_omi_mat_ha, i, cholesky(omi)')
-        const_den_mat_ha[i,1] = sqrt(det(omi)) * 0.5 * gamma(q / 2) / (pi()^(q / 2))
+        omi = invsym(0.5 * (om + om'))
+        ch_omi = cholesky(omi)'
+        asarray(ch_omi_mat_ha, i, ch_omi)
+        log_det_mat_ha[i, 1] = sum(ln(diagonal(ch_omi)))
+        Xc = ch_omi * X
+        q_x = colsum(Xc:^2)
+        if (q_x <= 0 | missing(q_x)) {
+            errprintf("projected SPUR vector has zero quadratic form\n")
+            exit(198)
+        }
+        log_ha_mat_X[i, 1] = log_det_mat_ha[i, 1] - 0.5 * q * ln(q_x)
     }
 
-    // Compare simulated likelihood ratios with the observed ratio.
+    // Compare simulated likelihood ratios with the observed ratio in log-space.
     pv_mat = J(n_c_ho, 1, .)
 
     for (i = 1; i <= n_c_ho; i++) {
-		ch_null = asarray(ch_om_mat,i)
+        ch_null = asarray(ch_om_mat, i)
         e = ch_null' * emat
-        ch_omi = asarray(ch_omi_mat,i)
-        const_den = const_den_mat[i,1]
+        ch_omi = asarray(ch_omi_mat, i)
+        log_det_ho = log_det_mat[i, 1]
         xc = ch_omi * e
-        den_ho = const_den * ((colsum(xc:^2)) :^ (-q / 2))'
-        den_ha_mat = J(cols(emat), n_c_ha, .)
-		
+        q_e = colsum(xc:^2)'
+        if (any(q_e :<= 0) | missing(q_e)) {
+            errprintf("simulated SPUR vector has zero quadratic form\n")
+            exit(198)
+        }
+        log_ho = log_det_ho :- 0.5 * q :* ln(q_e)
+        log_ha_mat = J(cols(emat), n_c_ha, .)
+
         // Compute for data
         Xc = ch_omi * X
-        den_ho_X = const_den * ((colsum(Xc:^2)) :^ (-q / 2))'
-        den_ha_mat_X = J(n_c_ha, 1, .)
+        q_x = colsum(Xc:^2)
+        if (q_x <= 0 | missing(q_x)) {
+            errprintf("projected SPUR vector has zero quadratic form\n")
+            exit(198)
+        }
+        log_ho_X = log_det_ho - 0.5 * q * ln(q_x)
 
         for (j = 1; j <= n_c_ha; j++) {
-			ch_omi = asarray(ch_omi_mat_ha,j)
-            const_den = const_den_mat_ha[j,1]
+            ch_omi = asarray(ch_omi_mat_ha, j)
             xc = ch_omi * e
-            den_ha_mat[.,j] = const_den * ((colsum(xc:^2)) :^ (-q / 2))'
-            Xc = ch_omi * X
-            den_ha_mat_X[j,1] = const_den * ((colsum(Xc:^2)) :^ (-q / 2))
+            q_e = colsum(xc:^2)'
+            if (any(q_e :<= 0) | missing(q_e)) {
+                errprintf("simulated SPUR vector has zero quadratic form\n")
+                exit(198)
+            }
+            log_ha_mat[., j] = log_det_mat_ha[j, 1] :- 0.5 * q :* ln(q_e)
         }
-	
-        den_ha_avg = mean(den_ha_mat')'
-        lr = den_ha_avg :/ den_ho
-        den_ha_avg_X = mean(den_ha_mat_X)'
-        lr_X = den_ha_avg_X / den_ho_X
-        pv_mat[i,1] = mean(lr :> lr_X)
-		
-		
+
+        m_row = rowmax(log_ha_mat)
+        log_lr = m_row :+ ln(mean(exp(log_ha_mat :- m_row)')') :- log_ho
+        m_x = max(log_ha_mat_X)
+        log_lr_X = m_x + ln(mean(exp(log_ha_mat_X :- m_x))) - log_ho_X
+        pv_mat[i, 1] = mean(log_lr :> log_lr_X)
     }
 
     return(pv_mat)
 }
-
-
-
-
 end

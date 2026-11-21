@@ -601,7 +601,7 @@ spur y x1, q(15) nrep(200) seed(42) backend(auto)
 assert r(tied) == 1
 assert "`r(backend)'" == "fallback"
 assert "`r(diagnostics_backend_reason)'" == "tied eigenspace"
-assert "`r(transform_backend)'" == "rust"
+assert "`r(transform_backend)'" == "fallback"
 rename (h_y h_x1) (auto_hy auto_hx1)
 spur y x1, q(15) nrep(200) seed(42) backend(fallback) replace
 assert_var_close auto_hy h_y 1e-12
@@ -672,21 +672,41 @@ foreach backend in fallback rust {
     assert abs(r(ci_l) - 87 * `lower') < 1e-8
 }
 
-// Equilateral geometry has proportional projected covariance shapes.
+// Regular pentagon (N=5, q=2) has proportional 2x2 projected covariance shapes.
 clear
-input double s_1 s_2 y
-0 0 0
-1 0 1
-.5 .8660254037844386 2
-end
+set obs 5
+gen double theta = 2 * _pi * (_n - 1) / _N
+gen double s_1 = cos(theta)
+gen double s_2 = sin(theta)
+gen double y = cos(theta) + 0.2 * sin(2 * theta)
 foreach backend in fallback rust {
     capture spurtest i0 y, q(2) nrep(99) seed(42) backend(`backend')
-    assert _rc != 0
+    assert _rc == 198
     capture spurtest i1 y, q(2) nrep(99) seed(42) backend(`backend')
-    assert _rc != 0
+    assert _rc == 198
     capture spurhalflife y, q(2) nrep(99) seed(42) backend(`backend')
-    assert _rc != 0
+    assert _rc == 198
 }
+
+// High-q (n=70, q=40) half-life fallback must match Rust without linear-space overflow.
+clear
+set obs 70
+gen double s_1 = mod(_n - 1, 10) + 0.1 * sin(_n)
+gen double s_2 = floor((_n - 1) / 10) + 0.1 * cos(_n)
+gen double y = sin(0.4 * s_1) + 0.7 * cos(0.3 * s_2)
+spurhalflife y, q(40) nrep(99) seed(42) backend(rust)
+local hl_r_empty = r(empty)
+local hl_r_l = r(ci_l)
+local hl_r_u = r(ci_u)
+spurhalflife y, q(40) nrep(99) seed(42) backend(fallback)
+assert r(empty) == `hl_r_empty'
+if `hl_r_empty' == 0 {
+    assert abs(r(ci_l) - `hl_r_l') < 1e-10
+    if missing(`hl_r_u') assert missing(r(ci_u))
+    else assert abs(r(ci_u) - `hl_r_u') < 1e-10
+}
+capture spurtransform y, prefix(t_miss_) transformation(iso) radius(.)
+assert _rc == 198
 
 // Final check on user Mata globals
 mata: assert(emat == 999)

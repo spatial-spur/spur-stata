@@ -15,7 +15,7 @@ program spurtransform, rclass sortpreserve
 		exit 198
 	}
 
-	if "`transformation'" != "iso" & `radius' != -1 {
+	if "`transformation'" != "iso" & (`radius' != -1 | missing(`radius')) {
 		di as error "Option radius only allowed with transformation(iso)."
 		exit 198
 	}
@@ -25,7 +25,7 @@ program spurtransform, rclass sortpreserve
 		exit 198
 	}
 
-	if "`transformation'" == "iso" & `radius' <= 0 {
+	if "`transformation'" == "iso" & (`radius' <= 0 | missing(`radius')) {
 		di as error "Radius must be positive."
 		exit 198
 	}
