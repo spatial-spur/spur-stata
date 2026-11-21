@@ -59,6 +59,17 @@ plugins. The SPI source and redistribution statement are available at
 https://www.stata.com/plugins/
 https://www.stata.com/statalist/archive/2007-08/msg01210.html
 
+Commuting-zone example data
+===========================
+
+The example workbooks reproduce the Chetty, Hendren, Kline and Saez
+(2014) data and labels distributed by Mueller and Watson (2024). The
+original data and replication deposits carry CC BY 4.0.
+https://doi.org/10.1093/qje/qju022
+https://doi.org/10.7910/DVN/NALG3E
+https://doi.org/10.5281/zenodo.11199509
+https://creativecommons.org/licenses/by/4.0/
+
 These notices cover the locked Cargo build graph across supported
 targets. The selected components depend on the target and build features.
 The source for each registry crate is available from crates.io by name
