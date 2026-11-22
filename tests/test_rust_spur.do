@@ -191,8 +191,8 @@ void _test_verify_canon_halflife(
 
     ci = spatial_persistence(y, distmat, emat_al, level / 100)
     md = max(getdistmat(s))
-    if (latlong != "") md = md * 3.14159265359 * 6371000.009 * 2
-    assert(abs(md - rust_md) < 1e-6)
+    if (latlong != "") md = md * pi() * 6371000.009 * 2
+    assert(abs(md - rust_md) < 1e-12 * max((1, abs(md))))
     cil = ci.hl_ci_lower
     ciu = ci.hl_ci_upper
     if (ciu >= 100) ciu = .
@@ -397,8 +397,7 @@ drop _all_one
 // ---------------------------------------------------------------------------
 // 3. Spatial transformations parity (lbmgls, nn, iso with isolated pts, cluster)
 // ---------------------------------------------------------------------------
-// Note: Mata getdistmat uses 12-digit 3.14159265359 vs IEEE pi (~8.5e-13 rel),
-// which sigma_lbm^{-1/2} amplifies up to ~1e-7 on dense latlong points.
+// sigma_lbm^{-1/2} on 200 dense points amplifies eigensolver rounding up to ~1e-7.
 spurtransform y x1 x2, prefix(rl_) transformation(lbmgls) latlong backend(rust)
 assert "`r(backend)'" == "rust"
 spurtransform y x1 x2, prefix(fl_) transformation(lbmgls) latlong backend(fallback)

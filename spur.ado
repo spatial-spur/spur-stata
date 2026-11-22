@@ -39,8 +39,8 @@ program define spur, rclass sortpreserve
 	if `avc' == -1 {
 		local avc 0.03
 	}
-	if `avc' < 0.001 | `avc' > 0.99 {
-		di as error "avc() must be between 0.001 and 0.99"
+	if missing(`avc') | `avc' <= 0.001 | `avc' >= 0.99 {
+		di as error "avc() must lie strictly between 0.001 and 0.99"
 		exit 198
 	}
 
