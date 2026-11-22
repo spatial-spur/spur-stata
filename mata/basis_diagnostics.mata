@@ -96,7 +96,8 @@ struct spur_diagnostic_design scalar spur_prepare_residual_diagnostic(real matri
     }
 
     M = I(n) - Qx * Qx'
-    sigma = get_sigma_residual(distmat, getcbar(.999, distmat), M)
+    // The intercept projection removes the all-ones term from exp(-cD).
+    sigma = M * expm1(-getcbar(.999, distmat) * distmat) * M
     return(spur_prepare_diagnostic(Y, sigma, get_R(sigma, q), M))
 }
 end

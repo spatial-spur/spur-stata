@@ -2,70 +2,44 @@
 version 14
 mata
 
-real scalar getcbar(real scalar rhobar, real matrix distmat) {
-	real scalar c0
-	real scalar c1
-	real vector vd
-	real scalar v, i1
-	real scalar jj
-	real scalar cm, cbar
-	
-	c0 = 10
-	c1 = 10
-	vd = lvech(distmat)
+real scalar getcbar(real scalar rhobar, real matrix distmat)
+{
+    real colvector distances
+    real scalar lo, hi, mid, legacy
 
-    // Adjust c0 and c1 bounds so c0 yields v > rhobar and c1 yields v < rhobar
-    i1 = 0
-	jj = 0
+    distances = lvech(distmat)
+    if (rhobar <= mean(distances :== 0) | rhobar >= 1) {
+        errprintf("average correlation is unattainable for these locations\n")
+        exit(198)
+    }
 
-    while (i1 == 0) {
-        v = mean(exp(-c0 * vd))
-        i1 = (v > rhobar)
-      
-        if (i1 == 0) {
-            c1 = c0
-            c0 = c0 / 2
-            jj = jj + 1
+    lo = hi = 10
+    while (mean(exp(-lo * distances)) <= rhobar) {
+        hi = lo
+        lo = lo / 2
+        if (lo == 0) {
+            errprintf("SPUR decay calibration lower bracket underflowed\n")
+            exit(198)
         }
-        if (jj > 500) {
-            _error("rhobar too large")
+    }
+    while (mean(exp(-hi * distances)) >= rhobar) {
+        lo = hi
+        hi = 2 * hi
+        if (hi >= .) {
+            errprintf("SPUR decay calibration upper bracket exceeds the numeric range\n")
+            exit(198)
         }
     }
 
-    // Verify that c1 yields a value less than rhobar
-    i1 = 0
-    jj = 0
-    while (i1 == 0) {
-        v = mean(exp(-c1 * vd))
-        i1 = (v < rhobar)
-      
-        if (i1 == 0) {
-            c0 = c1
-            c1 = 2 * c1
-            jj = jj + 1
-        }
-        if (c1 > 10000) {
-            i1 = 1
-        }
-        if (jj > 500) {
-            _error("rhobar too small")
-        }
+    // Retain the legacy tolerance only when its search found a bracket.
+    legacy = hi <= 10240
+    while (hi - lo > (legacy ? .001 : 1e-12 * hi)) {
+        mid = legacy ? sqrt(lo * hi) : lo + (hi - lo) / 2
+        if (mid == lo | mid == hi) break
+        if (mean(exp(-mid * distances)) < rhobar) hi = mid
+        else lo = mid
     }
-
-    // Bisection determination of cbar
-    while ((c1 - c0) > 0.001) {
-        cm = sqrt(c0 * c1)
-        v = mean(exp(-cm * vd))
-      
-        if (v < rhobar) {
-            c1 = cm
-        } else {
-            c0 = cm
-        }
-    }
-
-    cbar = sqrt(c0 * c1)
-    return(cbar)
+    return(legacy ? sqrt(lo * hi) : lo + (hi - lo) / 2)
 }
 
 end

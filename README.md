@@ -62,7 +62,7 @@ spurtest i1 am, latlong
 // Transform the variable am to remove the spatial unit root and save the transformed variable as h_am
 spurtransform am, prefix("h_") latlong
 
-// Construct a confindence interval for the spatial half-life of the transformed variable am
+// Estimate the half-life confidence set for am on the Table 1 grid
 spurhalflife am, latlong                
 
 ```
@@ -79,7 +79,15 @@ Müller, Ulrich K. and Mark W. Watson "Spatial Unit Roots and Spurious Regressio
 SPUR inference requires at least two informative weighted directions. Residual
 procedures also require `q` no larger than the residual degrees of freedom.
 Experiments with insufficient covariance rank or proportional covariance shapes
-return an error. Euclidean half-lives use the coordinate units; geographic
-half-lives use meters. The Mata fallback uses the same type-7 simulation
-quantiles and canonical basis orientation as the native backend; these choices
-can change finite-simulation results relative to earlier Mata releases.
+return an error. Half-life reports the hull of accepted points on Müller and
+Watson’s Table 1 grid. An open upper endpoint means the last tested point at
+100 sample diameters was accepted. Euclidean half-lives use the coordinate
+units. Geographic half-lives use meters. Both backends use type-7 simulation
+quantiles and a common sign convention for the basis. Finite-simulation results
+can differ from earlier Mata releases.
+
+The combined `spur` command runs OLS with a constant. Its LBM GLS columns are
+centered. The transformed intercept reflects that normalization. For a manual
+transformed IV analysis, justify exclusion and instrument relevance for the
+transformed variables. Exclusion at each original site alone can fail after
+mixing observations from different sites.

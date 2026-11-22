@@ -78,7 +78,8 @@ program define spurhalflife, rclass sortpreserve
 		}
 	}
 
-	if !missing(scalar(`ci_u')) & scalar(`ci_u') >= 100 {
+	local top_grid_accepted = !missing(scalar(`ci_u')) & scalar(`ci_u') == 100
+	if `top_grid_accepted' {
 		scalar `ci_u' = .
 	}
 	local empty = missing(scalar(`ci_l'))
@@ -109,18 +110,19 @@ program define spurhalflife, rclass sortpreserve
 			local units "unit of original coordinates"
 		}
 	}
-	di as text "Spatial half life " "`level'" "% confidence interval (in " "`units'" ")"
+	di as text "Spatial half-life `level'% confidence set on the Table 1 grid"
+	di as text "Hull of accepted grid points (in `units')"
 	di as result "---------------------------------------"
 	if `empty' {
-		di as result "Confidence set is empty."
+		di as result "No grid point was accepted."
 	}
 	else {
 		di as result "Lower bound: " %12.6g scalar(`ci_l')
-		if !missing(scalar(`ci_u')) {
-			di as result "Upper bound: " %12.6g scalar(`ci_u')
+		if `top_grid_accepted' {
+			di as result "Upper bound:    inf (largest tested point accepted at 100 sample diameters)"
 		}
 		else {
-			di as result "Upper bound:    inf"
+			di as result "Upper bound: " %12.6g scalar(`ci_u')
 		}
 	}
 	di as result "---------------------------------------"

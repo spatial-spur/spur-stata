@@ -16,7 +16,7 @@ real matrix spur_select_basis(real matrix V, real colvector d, real scalar qmax)
 {
     real matrix R
     real colvector ds, colj
-    real scalar j, i, best_abs, sign_cutoff
+    real scalar j, i, best_abs, tolerance
 
     if (qmax < 2 | qmax >= rows(V)) {
         errprintf("q must satisfy 2 <= q < n\n")
@@ -34,8 +34,8 @@ real matrix spur_select_basis(real matrix V, real colvector d, real scalar qmax)
 	for (j = 1; j <= cols(R); j++) {
 		colj = R[., j]
 		best_abs = max(abs(colj))
-		sign_cutoff = best_abs * (1 - 64 * epsilon(1))
-		for (i = 1; abs(colj[i]) < sign_cutoff; i++) {}
+		tolerance = 1e-12 * best_abs
+		for (i = 1; best_abs - abs(colj[i]) > tolerance; i++) {}
 		if (colj[i] < 0) {
 			R[., j] = -colj
 		}

@@ -56,20 +56,13 @@ mata set matastrict on
 
 real colvector _test_canon_signs(real matrix R)
 {
-    real scalar j, i, best_i, best_abs, v
+    real scalar j, i, best_abs
     real colvector s
     s = J(cols(R), 1, 1)
     for (j = 1; j <= cols(R); j++) {
-        best_i = 1
-        best_abs = abs(R[1, j])
-        for (i = 2; i <= rows(R); i++) {
-            v = abs(R[i, j])
-            if (v > best_abs) {
-                best_abs = v
-                best_i = i
-            }
-        }
-        if (R[best_i, j] < 0) s[j] = -1
+        best_abs = max(abs(R[., j]))
+        for (i = 1; best_abs - abs(R[i, j]) > 1e-12 * best_abs; i++) {}
+        if (R[i, j] < 0) s[j] = -1
     }
     return(s)
 }
@@ -119,7 +112,7 @@ void _test_verify_canon_test(
         }
         M = I(rows(y)) - X * invsym(X' * X) * X'
         c_bm = getcbar(0.999, distmat)
-        sig = get_sigma_residual(distmat, c_bm, M)
+        sig = M * expm1(-c_bm * distmat) * M
         R = get_R(sig, q)
         sg = _test_canon_signs(R)
         emat_al = sg :* emat
@@ -733,5 +726,47 @@ foreach backend in rust fallback {
         radius(15141901.14538) backend(`backend') replace
     assert h_y == 0
 }
+
+// A small group of widely separated and close sites needs a decay above 10,240.
+mata:
+    sites = ((0::9) * 1e-8) \ 1
+    distance = abs(sites * J(1, 11, 1) - J(11, 1, 1) * sites')
+    for (target_index = 1; target_index <= 3; target_index++) {
+        target = (.03, .001, .0001)[target_index]
+        decay = getcbar(target, distance)
+        assert(abs(mean(exp(-decay * lvech(distance))) - target) < 1e-12)
+    }
+end
+capture mata: getcbar(.01, (0, 0, 1 \ 0, 0, 1 \ 1, 1, 0))
+assert _rc == 198
+
+// Rounding the raw distances after dividing by the diameter created a false tie.
+clear
+input double s_1 double y
+0 0
+.66219144446564393 10
+-.66219144446564404 20
+86012.158427686139 30
+43006.07921384307 40
+end
+foreach backend in rust fallback {
+    quietly spurtransform y, transformation(nn) prefix(h_) backend(`backend') replace
+    assert h_y[1] == -10
+}
+
+// Nearly equal loadings on symmetric sites use a common sign before simulation.
+clear
+set obs 60
+generate double s_1 = (_n - 1) / 59
+generate double x = s_1 - .5
+generate double y = sin(13 * s_1)
+foreach backend in rust fallback {
+    quietly spurtest i1resid y x, q(15) nrep(10000) seed(42) backend(`backend') nthreads(1)
+    matrix cv_`backend' = r(cv)
+    scalar p_`backend' = r(p)
+    assert r(tied) == 0
+}
+mata: assert(mreldif(st_matrix("cv_rust"), st_matrix("cv_fallback")) < 1e-10)
+assert p_rust == p_fallback
 
 display "SPUR Stata Rust tests passed."

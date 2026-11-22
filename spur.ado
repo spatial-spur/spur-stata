@@ -210,6 +210,7 @@ program define spur, rclass sortpreserve
 	display as text ""
 	display as text "Transformed SCPC"
 	matlist `transformed_scpcstats', border(all)
+	display as text "The transformed intercept reflects LBM GLS centering."
 
 	local row 0
 	foreach diagnostic in i0 i1 i0resid i1resid {
