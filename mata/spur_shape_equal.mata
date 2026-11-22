@@ -1,4 +1,4 @@
-version 14
+version 16.0
 mata
 real scalar spur_shape_equal(real matrix a, real matrix b)
 {

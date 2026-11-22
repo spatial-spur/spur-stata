@@ -47,6 +47,7 @@ computes both the levels and transformed branches.
 {pstd}
 The transformed variables are written to the active dataset with prefix
 {it:h_}. Use {opt replace} if these variables already exist.
+The transformed intercept reflects the centering of the LBM-GLS transformed variables.
 
 {pstd}
 {cmd:spur} requires the matching {cmd:scpc-stata} package. For IV and fixed-effect

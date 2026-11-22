@@ -2,7 +2,7 @@
 mata mata set matastrict on
 
 program spurtest, prop(twopart)
-	version 14
+	version 16.0
 
 	local alltests i1 i0 i1resid i0resid
 

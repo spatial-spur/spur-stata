@@ -2,7 +2,7 @@
 clear all
 mata mata clear
 set more off
-version 14
+version 16.0
 
 // Run from the shared workspace root or pass its path as the first argument.
 args repo_root
@@ -738,6 +738,18 @@ mata:
     }
 end
 capture mata: getcbar(.01, (0, 0, 1 \ 0, 0, 1 \ 1, 1, 0))
+assert _rc == 198
+mata: assert(getcbar(exp(-10240 * 1e-4), (0, 1e-4 \ 1e-4, 0)) == 10240)
+
+// The demeaned kernel retains increments too small for exp(z) - 1.
+mata: assert(max(abs(get_sigma_dm((0, 1 \ 1, 0), 1e-16) - (5e-17, -5e-17 \ -5e-17, 5e-17))) < 1e-31)
+mata:
+    v = 1::60
+    D = abs(v * J(1, rows(v), 1) - J(rows(v), 1, 1) * v') / 59
+    supported = spur_prepare_residual_diagnostic(sin(v), (1e6 * v :+ 1, -1e6 * v), D, 8)
+    assert(cols(supported.R) == 8)
+end
+capture mata: unsupported = spur_prepare_residual_diagnostic(sin(v), v, D, 8)
 assert _rc == 198
 
 // Rounding the raw distances after dividing by the diameter created a false tie.

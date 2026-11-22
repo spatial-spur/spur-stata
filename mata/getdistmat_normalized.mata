@@ -1,5 +1,5 @@
 *! version 1.0.0  21jan2025 pdavidboll
-version 14
+version 16.0
 mata 
 
 real matrix getdistmat_normalized(real matrix s, | real scalar max_d)

@@ -2,7 +2,7 @@
 mata mata set matastrict on
 
 program define spurhalflife, rclass sortpreserve
-	version 14
+	version 16.0
 	syntax varname(numeric) [if] [in] , [q(int 15) nrep(int 100000) seed(int 42) Level(real 95) latlong NORMdist BACKend(string) nthreads(integer -1)]
 	marksample touse
 

@@ -1,4 +1,4 @@
-version 14
+version 16.0
 mata
 
 struct spur_diagnostic_design {
@@ -56,7 +56,7 @@ struct spur_diagnostic_design scalar spur_prepare_residual_diagnostic(real matri
 {
     real scalar n, k, j, pass, prev, scale, cnorm
     real matrix Qx, M, sigma
-    real colvector column
+    real colvector column, constant
 
     n = rows(distmat)
     k = cols(X)
@@ -95,9 +95,17 @@ struct spur_diagnostic_design scalar spur_prepare_residual_diagnostic(real matri
         Qx[., j] = Qx[., j] :/ cnorm
     }
 
+    constant = J(n, 1, 1 / sqrt(n))
+    for (pass = 1; pass <= 2; pass++) {
+        constant = constant - Qx * (Qx' * constant)
+    }
+    if (sum(constant :^ 2) > epsilon(1)) {
+        errprintf("SPUR residual tests require a design that spans a constant\n")
+        exit(198)
+    }
+
     M = I(n) - Qx * Qx'
-    // The intercept projection removes the all-ones term from exp(-cD).
-    sigma = M * expm1(-getcbar(.999, distmat) * distmat) * M
+    sigma = get_sigma_residual(distmat, getcbar(.999, distmat), M)
     return(spur_prepare_diagnostic(Y, sigma, get_R(sigma, q), M))
 }
 end

@@ -1,5 +1,5 @@
 *! version 1.0.0  21jan2025 pdavidboll
-version 14
+version 16.0
 mata
 
 struct spur_diagnostic_result scalar spatial_i1_test(struct spur_diagnostic_design scalar design,

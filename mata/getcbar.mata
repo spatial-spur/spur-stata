@@ -1,11 +1,11 @@
 *! version 1.0.0  21jan2025 pdavidboll
-version 14
+version 16.0
 mata
 
 real scalar getcbar(real scalar rhobar, real matrix distmat)
 {
     real colvector distances
-    real scalar lo, hi, mid, legacy
+    real scalar lo, hi, mid, legacy, corr
 
     distances = lvech(distmat)
     if (rhobar <= mean(distances :== 0) | rhobar >= 1) {
@@ -22,7 +22,10 @@ real scalar getcbar(real scalar rhobar, real matrix distmat)
             exit(198)
         }
     }
-    while (mean(exp(-hi * distances)) >= rhobar) {
+    while (1) {
+        corr = mean(exp(-hi * distances))
+        if (corr < rhobar) break
+        if (hi >= 10240 & corr == rhobar) return(hi)
         lo = hi
         hi = 2 * hi
         if (hi >= .) {

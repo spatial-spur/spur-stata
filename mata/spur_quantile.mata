@@ -1,4 +1,4 @@
-version 14
+version 16.0
 mata
 real colvector spur_quantile(real colvector x, real vector probs)
 {

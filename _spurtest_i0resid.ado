@@ -1,6 +1,6 @@
 *! version 1.1.0  17nov2026 spatial-spur
 program define _spurtest_i0resid, rclass sortpreserve
-	version 14
+	version 16.0
 	syntax varlist(numeric) [if] [in], [q(int 15) nrep(int 100000) seed(int 42) latlong BACKend(string) nthreads(integer -1)]
 	marksample touse
 

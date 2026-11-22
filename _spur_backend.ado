@@ -2,7 +2,7 @@
 mata mata set matastrict on
 
 program define _spur_backend, rclass
-    version 14
+    version 16.0
 
     gettoken subcmd rest : 0, parse(" ,")
     local rest = ltrim(`"`rest'"')

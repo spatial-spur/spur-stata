@@ -26,6 +26,8 @@ Then, you can run the example do-file, which reproduces Table 1 from [Müller & 
 
 ### Local development checkout
 
+This development checkout requires Stata 16 or later.
+
 Install the matching SCPC checkout before using the combined `spur` command.
 
 ```stata

@@ -1,4 +1,4 @@
-version 14
+version 16.0
 mata
 
 void spur_mata_test(string scalar flavor, string scalar yvar, string scalar xvars,

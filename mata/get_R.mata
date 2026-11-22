@@ -1,5 +1,5 @@
 *! version 1.1.0  17nov2026 spatial-spur
-version 14
+version 16.0
 mata
 
 void spur_sorted_eigensystem(real matrix sigma, real matrix V, real colvector d)

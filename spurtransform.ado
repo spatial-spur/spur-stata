@@ -2,7 +2,7 @@
 mata mata set matastrict on
 
 program spurtransform, rclass sortpreserve
-	version 14
+	version 16.0
 	syntax varlist(numeric) [if] [in] , PREfix(string) [ transformation(string) radius(string) clustvar(varname) latlong Replace separately BACKend(string) nthreads(integer -1)]
 
 	// check correct specification of options

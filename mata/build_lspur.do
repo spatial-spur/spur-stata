@@ -1,6 +1,6 @@
 * Run in a fresh Stata session from the spur-stata repository root.
 * Optional argument: directory for the compiled library.
-version 14
+version 16.0
 args output_dir
 if `"`output_dir'"' == "" local output_dir "."
 set more off

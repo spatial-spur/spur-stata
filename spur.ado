@@ -1,6 +1,6 @@
 *! version 1.1.0  17nov2026 spatial-spur
 program define spur, rclass sortpreserve
-	version 14
+	version 16.0
 
 	syntax varlist(numeric min=2) [if] [in], ///
 		[ ///
