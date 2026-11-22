@@ -108,7 +108,7 @@ program define spurhalflife, rclass sortpreserve
 			local units "unit of original coordinates"
 		}
 	}
-    di as text "Spatial half-life `level'% confidence set (in `units')"
+    di as text "Approximate spatial half-life `level'% confidence set (in `units')"
     di as result "---------------------------------------"
     if `empty' {
         di as result "Empty confidence set."

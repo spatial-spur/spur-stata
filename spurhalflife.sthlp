@@ -34,7 +34,7 @@
 This command implements a method to construct confidence sets about the half-life of spatial processes developed by {help spurtest##mw2024:Müller and Watson (2024)}. This inference is based on the persistence parameter in the spatial local-to-unity model. The half-life is the distance at which the correlation is 1/2.
 
 {pstd}
-The command inverts the continuous half-life tests and refines changes in acceptance on the transformed scale h/(1+h). It evaluates the zero and infinite limits explicitly. Narrow confidence-set components between search probes can escape detection.
+The command inverts the continuous half-life tests and refines changes in acceptance on the transformed scale h/(1+h). It evaluates the zero and infinite limits and adds short-half-life probes based on the smallest positive inter-site distance. Narrow components or gaps between probes can escape detection.
 
 {pstd}
 {cmd:spurhalflife} is part of a package of commands that also includes {cmd:spurtest} and {cmd:spurtransform}. A practical guide to these methods is provided in a paper accompanying this implementation ({help spurtest##bbv2026:Becker, Boll and Voth (2026)}), please cite this paper when using this code.

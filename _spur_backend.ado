@@ -62,10 +62,10 @@ program define _spur_backend, rclass
                 }
             }
             if `plugin_ok' == 1 {
-                capture plugin call _spur_rust_plugin, require_spec 0.3.7
+                capture plugin call _spur_rust_plugin, require_spec 0.3.8
                 if _rc != 0 {
                     local plugin_ok 0
-                    local plugin_reason "loaded spur_rust.plugin needs methods spec 0.3.7 or newer. Install the matching plugin and restart Stata"
+                    local plugin_reason "loaded spur_rust.plugin needs methods spec 0.3.8 or newer. Install the matching plugin and restart Stata"
                 }
             }
             local backend_reason ""
@@ -87,7 +87,20 @@ program define _spur_backend, rclass
 
     if "`subcmd'" == "check_coords" {
         local 0 `"`rest'"'
-        syntax , touse(varname) [latlong quiet minobs(integer 5)]
+        syntax , touse(varname) [latlong quiet cluster minobs(integer 3)]
+
+        qui count if `touse'
+        local ns = r(N)
+        if `ns' < `minobs' {
+            di as error "too few observations in the selected sample"
+            exit 2001
+        }
+        if "`cluster'" != "" {
+            return local slist ""
+            return scalar d = 0
+            return scalar n = `ns'
+            exit
+        }
 
         local slist ""
         local d 0
@@ -118,13 +131,6 @@ program define _spur_backend, rclass
                 disp as text "missing value(s) in s_* variable; aborting"
                 exit 999
             }
-        }
-
-        qui count if `touse'
-        local ns = r(N)
-        if `ns' < `minobs' {
-            disp as text "too few locations found in variables s_1, s_2 etc; aborting"
-            exit 999
         }
 
         if "`latlong'" != "" {
@@ -339,19 +345,19 @@ program define _spur_backend, rclass
             transformation(string) radius(string) [clustvar(string) latlong]
 
         capture noisily {
-            mata: _sp_t_s = get_s_matrix("`touse'", "`latlong'")
             mata: _sp_t_y = st_data(., "`invars'", "`touse'")
-            if "`transformation'" == "lbmgls" {
-                mata: _sp_t_hy = spur_lbm_gls(_sp_t_s, _sp_t_y)
+            if "`transformation'" == "cluster" {
+                mata: _sp_t_cl = get_cluster_matrix("`clustvar'", "`touse'")
+                mata: _sp_t_hy = spur_demean_clusters(_sp_t_y, _sp_t_cl)
             }
             else {
-                if "`transformation'" == "cluster" {
-                    mata: _sp_t_cl = get_cluster_matrix("`clustvar'", "`touse'")
+                mata: _sp_t_s = get_s_matrix("`touse'", "`latlong'", 2)
+                if "`transformation'" == "lbmgls" {
+                    mata: _sp_t_hy = spur_lbm_gls(_sp_t_s, _sp_t_y)
                 }
                 else {
-                    mata: _sp_t_cl = 0
+                    mata: _sp_t_hy = make_transform(_sp_t_s, "`transformation'", strtoreal("`radius'"), 0) * _sp_t_y
                 }
-                mata: _sp_t_hy = make_transform(_sp_t_s, "`transformation'", strtoreal("`radius'"), _sp_t_cl) * _sp_t_y
             }
             mata: st_store(., tokens("`outvars'"), "`touse'", _sp_t_hy)
         }

@@ -32,7 +32,7 @@ real matrix get_s_matrix(string scalar touse, string scalar latlong, | real scal
 	
 	// ----------------------------------------------------------------------
 	
-	if (args() < 3) minobs = 5
+	if (args() < 3) minobs = 3
 	ns=rows(s)
 	if(sum(rowmissing(s) :== 0) < ns){
 		stata("disp as text"+char(34)+"missing value(s) in s_* variable; aborting"+char(34))

@@ -56,7 +56,7 @@ Spatial I(0) test for residuals
 This command implements four tests developed by {help spurtest##mw2024:Müller and Watson (2024)} to diagnose unit roots in spatial processes. {cmd:spurtest i1resid} and {cmd:spurtest i0resid} test the null hypotheses of I(1) (unit root) and I(0) (stationarity), respectively, for regression errors. {cmd:spurtest i1} and {cmd:spurtest i0} test these hypotheses for an observed outcome {it:varname}. The residual tests include a constant in the regression of {it:depvar} on {it:indepvars}.
 
 {pstd}
-The I(0) tests require fewer than 0.0001 of observation pairs to share a location. This is the lowest correlation in the fixed I(0) calibration grid.
+The I(0) tests calibrate over attainable average pairwise correlations up to 0.03, including the co-location limit. The null is empty if more than 3% of observation pairs share a location.
 
 {pstd}
 {cmd:spurtest} is part of a package of commands that also includes {cmd:spurtransform} and {cmd:spurhalflife}. A practical guide to these methods is provided in a paper accompanying this implementation ({help spurtest##bbv2026:Becker, Boll and Voth (2026)}), please cite this paper when using this code.

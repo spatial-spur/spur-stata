@@ -98,7 +98,7 @@ void _test_verify_canon_test(
         R = get_R(sig, q)
         sg = _test_canon_signs(R)
         emat_al = (sg \ sg) :* emat
-        design = spur_prepare_diagnostic(y, sig, R, J(0, 0, .), 1)
+        design = spur_prepare_diagnostic(y, sig, R, J(0, 0, .), J(0, 1, .))
         if (flavor == "i0") result = spatial_i0_test(design, distmat, emat_al)
         else result = spatial_i1_test(design, distmat, emat_al)
     }
@@ -424,7 +424,7 @@ capture spurtransform y x1, prefix(rs_) transformation(lbmgls) latlong backend(r
 assert _rc == 110
 assert_var_close rs_y saved_rs_y 1e-15
 
-capture spurtransform y in 1/3, prefix(rs_) transformation(lbmgls) latlong replace backend(rust)
+capture spurtransform y in 1, prefix(rs_) transformation(lbmgls) latlong replace backend(rust)
 assert _rc != 0
 assert_var_close rs_y saved_rs_y 1e-15
 restore
@@ -771,5 +771,25 @@ foreach backend in rust fallback {
 }
 mata: assert(mreldif(st_matrix("cv_rust"), st_matrix("cv_fallback")) < 1e-10)
 assert p_rust == p_fallback
+
+// Each transform and test uses the sample size required by its own operation.
+clear
+set obs 3
+generate byte g = 1
+generate double y = 8e307
+foreach backend in rust fallback {
+    quietly spurtransform y if _n == 1, prefix(a_) transformation(cluster) clustvar(g) backend(`backend') replace
+    assert a_y == 0 in 1
+    quietly spurtransform y, prefix(b_) transformation(cluster) clustvar(g) backend(`backend') replace
+    assert b_y == 0
+}
+generate double s_1 = (_n - 1)^2
+replace y = 9 - _n^2
+foreach backend in rust fallback {
+    quietly spurtest i0 y, q(2) nrep(199) seed(42) backend(`backend')
+    assert !missing(r(p))
+    quietly spurtest i1 y, q(2) nrep(199) seed(42) backend(`backend')
+    assert !missing(r(p))
+}
 
 display "SPUR Stata Rust tests passed."

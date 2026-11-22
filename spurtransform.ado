@@ -88,6 +88,8 @@ program spurtransform, rclass sortpreserve
 
 	local latlong_flag = cond("`latlong'" != "", 1, 0)
 	local cl_arg = cond(`has_cluster' == 1, "`clustervar'", "")
+	local coord_options "`latlong' minobs(2)"
+	if `has_cluster' local coord_options "cluster minobs(1)"
 
 	local n_y : word count `varlist'
 	local out_vars ""
@@ -104,13 +106,13 @@ program spurtransform, rclass sortpreserve
 			qui replace `touse2' = 0 if missing(`clustervar')
 		}
 
-		_spur_backend check_coords, touse(`touse2') `latlong' quiet
+		_spur_backend check_coords, touse(`touse2') `coord_options' quiet
 		local slist "`r(slist)'"
 		local d = r(d)
 		local n_obs = r(n)
 
 		if "`used_backend'" == "rust" {
-			_spur_backend print_coords, n(`n_obs') d(`d') `latlong'
+			if `d' _spur_backend print_coords, n(`n_obs') d(`d') `latlong'
 			local pcmd `"spur_transform `d' "`transformation'" `latlong_flag' "`radius'" `has_cluster' `n_y' "`nthreads_arg'""'
 			_spur_backend plugin_call, vars(`slist' `cl_arg' `varlist' `out_vars') cond(`touse2') cmd(`"`pcmd'"')
 		}
@@ -129,13 +131,13 @@ program spurtransform, rclass sortpreserve
 				qui replace `touse2' = 0 if missing(`clustervar')
 			}
 
-			_spur_backend check_coords, touse(`touse2') `latlong' quiet
+			_spur_backend check_coords, touse(`touse2') `coord_options' quiet
 			local slist "`r(slist)'"
 			local d = r(d)
 			local n_obs = r(n)
 
 			if "`used_backend'" == "rust" {
-				_spur_backend print_coords, n(`n_obs') d(`d') `latlong'
+				if `d' _spur_backend print_coords, n(`n_obs') d(`d') `latlong'
 				local pcmd `"spur_transform `d' "`transformation'" `latlong_flag' "`radius'" `has_cluster' 1 "`nthreads_arg'""'
 				_spur_backend plugin_call, vars(`slist' `cl_arg' `name' `ov') cond(`touse2') cmd(`"`pcmd'"')
 			}

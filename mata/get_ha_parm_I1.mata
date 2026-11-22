@@ -5,7 +5,7 @@ mata
 real scalar get_ha_parm_I1(real matrix om_ho, real matrix distmat, real matrix R, real matrix e,
     real matrix M, real scalar c01, real scalar c95, real matrix om_c)
 {
-    real scalar best_param, best_power
+    real scalar best_param, best_power, min_distance
     // Variable declarations
     real scalar pow, ctry, c, pow50, c1, c2, ii
 
@@ -33,6 +33,7 @@ real scalar get_ha_parm_I1(real matrix om_ho, real matrix distmat, real matrix R
     ctry = c01
     best_param = ctry
     best_power = -1
+    min_distance = min(select(vec(distmat), vec(distmat) :> 0))
     ii = 0
     while (pow < pow50) {
         if (++ii > 200) {
@@ -45,6 +46,10 @@ real scalar get_ha_parm_I1(real matrix om_ho, real matrix distmat, real matrix R
         if (pow > best_power) {
             best_power = pow
             best_param = c
+        }
+        if (pow < pow50 & exp(-c * min_distance) == 0) {
+            if (best_param != c) om_c = spur_diagnostic_omega(distmat, best_param, R, M)
+            return(best_param)
         }
         ctry = 2 * ctry
     }

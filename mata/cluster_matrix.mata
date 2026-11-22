@@ -24,4 +24,32 @@ real matrix cluster_matrix(real colvector cluster)
 	return(clust_mat)
 	
 }
+
+real matrix spur_demean_clusters(real matrix values, real colvector cluster)
+{
+    real colvector permutation, sample_rows
+    real matrix panels, block
+    real rowvector lo, hi, anchor, scale
+    real scalar g
+
+    permutation = order(cluster, 1)
+    panels = panelsetup(cluster[permutation], 1)
+    for (g = 1; g <= rows(panels); g++) {
+        sample_rows = permutation[panels[g, 1]..panels[g, 2]]
+        block = values[sample_rows, .]
+        lo = colmin(block)
+        hi = colmax(block)
+        anchor = 0.5 * lo + 0.5 * hi
+        scale = colmax((hi - anchor) \ (anchor - lo))
+        scale = scale + (scale :== 0)
+        block = (block :- anchor) :/ scale
+        values[sample_rows, .] = (block :- mean(block)) :* scale
+    }
+    if (hasmissing(values)) {
+        errprintf("Cluster demeaning produced a non-finite entry.\n")
+        exit(198)
+    }
+    return(values)
+}
+
 end

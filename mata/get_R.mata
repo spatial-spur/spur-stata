@@ -28,7 +28,7 @@ real matrix spur_select_basis(real matrix V, real colvector d, real scalar qmax)
 		errprintf("SPUR covariance basis has insufficient positive rank for requested q\n")
 		exit(198)
 	}
-    if (d[qmax] - d[qmax + 1] <= 1.6e-11 * max((1, d[1]))) {
+    if (d[qmax] - d[qmax + 1] <= max((1.6e-11 * d[1], 8 * epsilon(1) * rows(V)))) {
         errprintf("Requested q splits a tied eigenspace. Choose q at an eigenvalue gap.\n")
         exit(198)
     }

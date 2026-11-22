@@ -42,7 +42,7 @@ runs {cmd:scpc} again.
 {pstd}
 The wrapper uses observations with complete outcomes and regressors for all stages
 and uses the same seeded simulation draws for all four diagnostics. It always
-computes both the levels and transformed branches.
+computes both the levels and transformed branches. Comparing both fits is a sensitivity analysis. Coverage after choosing a branch using the same data requires a separate justification.
 
 {pstd}
 The transformed variables are written to the active dataset with prefix

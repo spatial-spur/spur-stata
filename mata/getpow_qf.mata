@@ -3,26 +3,15 @@ version 16.0
 mata
 
 real scalar getpow_qf(real matrix om0, real matrix om1, real matrix e) {
-    // Variable declarations
-    real matrix om0i, om1i, ch_om0, ch_om1, ch_om0i, ch_om1i
-    real matrix ho, ha, ya_o, yo_a
+    real matrix lower0, lower1, ho, ha, ya_o, yo_a
     real vector qe, qa_o, qo_a, lr_o, lr_a
     real scalar cv, pow
 
-    // Step 1: Compute inverses
-    om0i = invsym(om0)    // Use invsym() for symmetric matrix inverse
-    om1i = invsym(om1)
-  
-    // Step 2: Cholesky decompositions
-    ch_om0 = cholesky(om0)'
-    ch_om1 = cholesky(om1)'
-    ch_om0i = cholesky(om0i)'
-    ch_om1i = cholesky(om1i)'
-  
-    // Step 3: Compute transformed matrices
-    ho = ch_om1i * ch_om0'
-    ha = ch_om0i * ch_om1'
-  
+    lower0 = cholesky(om0)
+    lower1 = cholesky(om1)
+    ho = lusolve(lower1, lower0)
+    ha = lusolve(lower0, lower1)
+
     // Step 4: Compute quadratic forms
     qe = colsum(e:^2)    // Sum of squares of columns of e
     ya_o = ho * e
