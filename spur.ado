@@ -48,6 +48,7 @@ program define spur, rclass sortpreserve
 	local req_backend "`r(req_backend)'"
 	local nthreads_arg "`r(nthreads)'"
 	local plugin_ok = r(plugin_ok)
+	local requested_reason "`r(backend_reason)'"
 
 	gettoken depvar indepvars : varlist
 
@@ -82,45 +83,38 @@ program define spur, rclass sortpreserve
 		local scpc_options `scpc_options' cvs
 	}
 
-	tempname i0_teststat i0_p i0_ha_param i0_cv
-	tempname i1_teststat i1_p i1_ha_param i1_cv
-	tempname i0resid_teststat i0resid_p i0resid_ha_param i0resid_cv
-	tempname i1resid_teststat i1resid_p i1resid_ha_param i1resid_cv
-	tempname diagnostics
+	_spur_backend check_coords, touse(`touse_all') `latlong' quiet
+	local slist "`r(slist)'"
+	local d = r(d)
+	if `q' >= r(n) {
+		di as error "q() must be smaller than the number of observations"
+		exit 198
+	}
 
-	local diag_backend ""
+	local h_tmp_vars ""
+	local n_vars_tr = 1 + `k_x_raw'
+	forvalues j = 1/`n_vars_tr' {
+		tempvar h_tmp_`j'
+		qui gen double `h_tmp_`j'' = .
+		local h_tmp_vars "`h_tmp_vars' `h_tmp_`j''"
+	}
+
+	tempname diagnostics diagnostic_cvs pipe_tied
+	local diag_backend "rust"
 	local diag_reason ""
+	local tr_reason ""
 	local diag_tied 0
-	local transform_ready 0
+	local latlong_flag = ("`latlong'" != "")
 
 	if `use_pipeline' == 1 {
-		_spur_backend check_coords, touse(`touse_all') `latlong' quiet
-		local slist "`r(slist)'"
-		local d = r(d)
-		if `q' >= r(n) {
-			di as error "q() must be smaller than the number of observations"
-			exit 198
-		}
-
-		local h_tmp_vars ""
-		local n_vars_tr = 1 + `k_x_raw'
-		forvalues j = 1/`n_vars_tr' {
-			tempvar h_tmp_`j'
-			qui gen double `h_tmp_`j'' = .
-			local h_tmp_vars "`h_tmp_vars' `h_tmp_`j''"
-		}
-
-		tempname pipe_diag pipe_cvs pipe_tied
-		matrix `pipe_diag' = J(4, 3, .)
-		matrix `pipe_cvs' = J(4, 3, .)
-
+		matrix `diagnostics' = J(4, 3, .)
+		matrix `diagnostic_cvs' = J(4, 3, .)
 		tempfile emat_file
 		set seed `seed'
 		_spur_backend write_emat, q(`q') nrep(`nrep') file(`"`emat_file'"')
 
-		local latlong_flag = cond("`latlong'" != "", 1, 0)
 		local plugin_vars "`slist' `varlist' `h_tmp_vars'"
-		local pcmd `"spur_pipeline `d' `k_x_raw' 1 `latlong_flag' `q' `nrep' "`nthreads_arg'" `"`emat_file'"' "`pipe_diag'" "`pipe_cvs'" "`pipe_tied'""'
+		local pcmd `"spur_pipeline `d' `k_x_raw' 1 `latlong_flag' `q' `nrep' "`nthreads_arg'" `"`emat_file'"' "`diagnostics'" "`diagnostic_cvs'" "`pipe_tied'""'
 		capture noisily _spur_backend plugin_call, vars(`plugin_vars') cond(`touse_all') cmd(`"`pcmd'"')
 		local rc = _rc
 		capture erase `"`emat_file'"'
@@ -128,120 +122,26 @@ program define spur, rclass sortpreserve
 			exit `rc'
 		}
 
-		if "`req_backend'" == "auto" & scalar(`pipe_tied') == 1 {
+		local diag_tied = scalar(`pipe_tied')
+		if "`req_backend'" == "auto" & `diag_tied' {
 			local use_pipeline 0
-			local diag_tied 1
-			local diag_reason "tied eigenspace"
-		}
-		else {
-			local transform_ready 1
-			local diag_backend "rust"
-			local diag_tied = scalar(`pipe_tied')
-			foreach diagnostic in i0 i1 i0r i1r {
-				local be_`diagnostic' "rust"
-			}
-
-			scalar `i0_teststat' = `pipe_diag'[1, 1]
-			scalar `i0_p' = `pipe_diag'[1, 2]
-			scalar `i0_ha_param' = `pipe_diag'[1, 3]
-			matrix `i0_cv' = (`pipe_cvs'[1, 1] \ `pipe_cvs'[1, 2] \ `pipe_cvs'[1, 3])
-
-			scalar `i1_teststat' = `pipe_diag'[2, 1]
-			scalar `i1_p' = `pipe_diag'[2, 2]
-			scalar `i1_ha_param' = `pipe_diag'[2, 3]
-			matrix `i1_cv' = (`pipe_cvs'[2, 1] \ `pipe_cvs'[2, 2] \ `pipe_cvs'[2, 3])
-
-			scalar `i0resid_teststat' = `pipe_diag'[3, 1]
-			scalar `i0resid_p' = `pipe_diag'[3, 2]
-			scalar `i0resid_ha_param' = `pipe_diag'[3, 3]
-			matrix `i0resid_cv' = (`pipe_cvs'[3, 1] \ `pipe_cvs'[3, 2] \ `pipe_cvs'[3, 3])
-
-			scalar `i1resid_teststat' = `pipe_diag'[4, 1]
-			scalar `i1resid_p' = `pipe_diag'[4, 2]
-			scalar `i1resid_ha_param' = `pipe_diag'[4, 3]
-			matrix `i1resid_cv' = (`pipe_cvs'[4, 1] \ `pipe_cvs'[4, 2] \ `pipe_cvs'[4, 3])
-
-			matrix `diagnostics' = `pipe_diag'
-			matrix rownames `diagnostics' = i0 i1 i0resid i1resid
-			matrix colnames `diagnostics' = teststat p ha_param
 		}
 	}
 
 	if `use_pipeline' == 0 {
-		local indiv_backend = cond(`diag_tied' == 1, "fallback", "`req_backend'")
-		local test_options q(`q') nrep(`nrep') seed(`seed') backend(`indiv_backend') nthreads(`nthreads_arg')
-		if "`latlong'" != "" {
-			local test_options `test_options' latlong
+		local diag_backend "fallback"
+		local diag_reason "`requested_reason'"
+		local tr_reason "`requested_reason'"
+		if `diag_tied' {
+			local diag_reason "tied eigenspace"
+			local tr_reason "requested fallback"
 		}
-
-		local transform_options prefix(`prefix') transformation(`transformation') backend(`indiv_backend') nthreads(`nthreads_arg')
-		if "`latlong'" != "" {
-			local transform_options `transform_options' latlong
-		}
-		if "`replace'" != "" {
-			local transform_options `transform_options' replace
-		}
-
-		quietly spurtest i0 `depvar' if `touse_all', `test_options'
-		scalar `i0_teststat' = r(teststat)
-		scalar `i0_p' = r(p)
-		scalar `i0_ha_param' = r(ha_param)
-		matrix `i0_cv' = r(cv)
-		local be_i0 "`r(backend)'"
-		local reason_i0 "`r(backend_reason)'"
-		local ti_i0 = r(tied)
-
-		quietly spurtest i1 `depvar' if `touse_all', `test_options'
-		scalar `i1_teststat' = r(teststat)
-		scalar `i1_p' = r(p)
-		scalar `i1_ha_param' = r(ha_param)
-		matrix `i1_cv' = r(cv)
-		local be_i1 "`r(backend)'"
-		local reason_i1 "`r(backend_reason)'"
-		local ti_i1 = r(tied)
-
-		quietly spurtest i0resid `depvar' `indepvars' if `touse_all', `test_options'
-		scalar `i0resid_teststat' = r(teststat)
-		scalar `i0resid_p' = r(p)
-		scalar `i0resid_ha_param' = r(ha_param)
-		matrix `i0resid_cv' = r(cv)
-		local be_i0r "`r(backend)'"
-		local reason_i0r "`r(backend_reason)'"
-		local ti_i0r = r(tied)
-
-		quietly spurtest i1resid `depvar' `indepvars' if `touse_all', `test_options'
-		scalar `i1resid_teststat' = r(teststat)
-		scalar `i1resid_p' = r(p)
-		scalar `i1resid_ha_param' = r(ha_param)
-		matrix `i1resid_cv' = r(cv)
-		local be_i1r "`r(backend)'"
-		local reason_i1r "`r(backend_reason)'"
-		local ti_i1r = r(tied)
-
-		matrix `diagnostics' = ///
-			(`i0_teststat', `i0_p', `i0_ha_param' \ ///
-			 `i1_teststat', `i1_p', `i1_ha_param' \ ///
-			 `i0resid_teststat', `i0resid_p', `i0resid_ha_param' \ ///
-			 `i1resid_teststat', `i1resid_p', `i1resid_ha_param')
-		matrix rownames `diagnostics' = i0 i1 i0resid i1resid
-		matrix colnames `diagnostics' = teststat p ha_param
-
-		if "`be_i0'" == "rust" & "`be_i1'" == "rust" & "`be_i0r'" == "rust" & "`be_i1r'" == "rust" {
-			local diag_backend "rust"
-		}
-		else {
-			local diag_backend "fallback"
-			foreach diagnostic in i0 i1 i0r i1r {
-				if `diag_tied' == 1 {
-					local reason_`diagnostic' "tied eigenspace"
-				}
-				else if "`diag_reason'" == "" {
-					local diag_reason "`reason_`diagnostic''"
-				}
-			}
-		}
-		local diag_tied = max(`diag_tied', `ti_i0', `ti_i1', `ti_i0r', `ti_i1r')
+		set seed `seed'
+		mata: spur_mata_pipeline("`varlist'", "`h_tmp_vars'", "`touse_all'", "`slist'", ///
+			`latlong_flag', `q', `nrep', "`diagnostics'", "`diagnostic_cvs'")
 	}
+	matrix rownames `diagnostics' = i0 i1 i0resid i1resid
+	matrix colnames `diagnostics' = teststat p ha_param
 
 	quietly regress `depvar' `indepvars' if `touse_all', robust
 
@@ -267,22 +167,13 @@ program define spur, rclass sortpreserve
 		local transformed_indepvars `transformed_indepvars' `prefix'`var'
 	}
 
-	local tr_reason ""
-	if `transform_ready' == 1 {
-		local tr_backend "rust"
-		forvalues j = 1/`n_vars_tr' {
-			local vname : word `j' of `varlist'
-			local hv : word `j' of `h_tmp_vars'
-			if "`replace'" != "" {
-				capture drop `prefix'`vname'
-			}
-			rename `hv' `prefix'`vname'
+	forvalues j = 1/`n_vars_tr' {
+		local vname : word `j' of `varlist'
+		local hv : word `j' of `h_tmp_vars'
+		if "`replace'" != "" {
+			capture drop `prefix'`vname'
 		}
-	}
-	else {
-		quietly spurtransform `depvar' `indepvars' if `touse_all', `transform_options'
-		local tr_backend "`r(backend)'"
-		local tr_reason "`r(backend_reason)'"
+		rename `hv' `prefix'`vname'
 	}
 
 	quietly regress `transformed_depvar' `transformed_indepvars' if `touse_all', robust
@@ -304,7 +195,7 @@ program define spur, rclass sortpreserve
 	local tr_scpc_tied = e(tied)
 
 	local used_backend "fallback"
-	if "`diag_backend'" == "rust" & "`tr_backend'" == "rust" & "`levels_scpc_be'" == "rust" & "`tr_scpc_be'" == "rust" {
+	if "`diag_backend'" == "rust" & "`levels_scpc_be'" == "rust" & "`tr_scpc_be'" == "rust" {
 		local used_backend "rust"
 	}
 	local any_tied = max(`diag_tied', `levels_scpc_tied', `tr_scpc_tied')
@@ -320,25 +211,18 @@ program define spur, rclass sortpreserve
 	display as text "Transformed SCPC"
 	matlist `transformed_scpcstats', border(all)
 
-	return scalar i0_teststat = `i0_teststat'
-	return scalar i0_p = `i0_p'
-	return scalar i0_ha_param = `i0_ha_param'
-	return matrix i0_cv = `i0_cv'
-
-	return scalar i1_teststat = `i1_teststat'
-	return scalar i1_p = `i1_p'
-	return scalar i1_ha_param = `i1_ha_param'
-	return matrix i1_cv = `i1_cv'
-
-	return scalar i0resid_teststat = `i0resid_teststat'
-	return scalar i0resid_p = `i0resid_p'
-	return scalar i0resid_ha_param = `i0resid_ha_param'
-	return matrix i0resid_cv = `i0resid_cv'
-
-	return scalar i1resid_teststat = `i1resid_teststat'
-	return scalar i1resid_p = `i1resid_p'
-	return scalar i1resid_ha_param = `i1resid_ha_param'
-	return matrix i1resid_cv = `i1resid_cv'
+	local row 0
+	foreach diagnostic in i0 i1 i0resid i1resid {
+		local ++row
+		tempname cv
+		matrix `cv' = (`diagnostic_cvs'[`row', 1] \ `diagnostic_cvs'[`row', 2] \ `diagnostic_cvs'[`row', 3])
+		return scalar `diagnostic'_teststat = `diagnostics'[`row', 1]
+		return scalar `diagnostic'_p = `diagnostics'[`row', 2]
+		return scalar `diagnostic'_ha_param = `diagnostics'[`row', 3]
+		return matrix `diagnostic'_cv = `cv'
+		return local `diagnostic'_backend "`diag_backend'"
+		return local `diagnostic'_backend_reason "`diag_reason'"
+	}
 
 	return matrix diagnostics = `diagnostics'
 
@@ -361,15 +245,7 @@ program define spur, rclass sortpreserve
 	return local backend "`used_backend'"
 	return local diagnostics_backend "`diag_backend'"
 	return local diagnostics_backend_reason "`diag_reason'"
-	return local i0_backend "`be_i0'"
-	return local i0_backend_reason "`reason_i0'"
-	return local i1_backend "`be_i1'"
-	return local i1_backend_reason "`reason_i1'"
-	return local i0resid_backend "`be_i0r'"
-	return local i0resid_backend_reason "`reason_i0r'"
-	return local i1resid_backend "`be_i1r'"
-	return local i1resid_backend_reason "`reason_i1r'"
-	return local transform_backend "`tr_backend'"
+	return local transform_backend "`diag_backend'"
 	return local transform_backend_reason "`tr_reason'"
 	return local scpc_levels_backend "`levels_scpc_be'"
 	return local scpc_levels_backend_reason "`levels_scpc_reason'"

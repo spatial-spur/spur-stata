@@ -3,7 +3,7 @@ mata mata set matastrict on
 
 program spurtransform, rclass sortpreserve
 	version 14
-	syntax varlist(numeric) [if] [in] , PREfix(string) [ transformation(string) radius(real -1) clustvar(varname) latlong Replace separately BACKend(string) nthreads(integer -1)]
+	syntax varlist(numeric) [if] [in] , PREfix(string) [ transformation(string) radius(string) clustvar(varname) latlong Replace separately BACKend(string) nthreads(integer -1)]
 
 	// check correct specification of options
 	if "`transformation'" == "" {
@@ -15,17 +15,22 @@ program spurtransform, rclass sortpreserve
 		exit 198
 	}
 
-	if "`transformation'" != "iso" & (`radius' != -1 | missing(`radius')) {
+	// Keep the supplied precision when forwarding the radius to Rust or Mata.
+	local radius = strtrim(`"`radius'"')
+	if "`radius'" == "" local radius -1
+	tempname radius_value
+	scalar `radius_value' = real(`"`radius'"')
+	if "`transformation'" != "iso" & scalar(`radius_value') != -1 {
 		di as error "Option radius only allowed with transformation(iso)."
 		exit 198
 	}
 
-	if "`transformation'" == "iso" & `radius' == -1 {
+	if "`transformation'" == "iso" & scalar(`radius_value') == -1 {
 		di as error "Radius missing."
 		exit 198
 	}
 
-	if "`transformation'" == "iso" & (`radius' <= 0 | missing(`radius')) {
+	if "`transformation'" == "iso" & (scalar(`radius_value') <= 0 | missing(scalar(`radius_value'))) {
 		di as error "Radius must be positive."
 		exit 198
 	}
@@ -111,7 +116,7 @@ program spurtransform, rclass sortpreserve
 		}
 		else {
 			_spur_backend mata_transform, invars(`varlist') outvars(`out_vars') touse(`touse2') ///
-				transformation(`transformation') radius(`radius') clustvar(`cl_arg') `latlong'
+				transformation(`transformation') radius(`"`radius'"') clustvar(`cl_arg') `latlong'
 		}
 	}
 	else {
@@ -136,7 +141,7 @@ program spurtransform, rclass sortpreserve
 			}
 			else {
 				_spur_backend mata_transform, invars(`name') outvars(`ov') touse(`touse2') ///
-					transformation(`transformation') radius(`radius') clustvar(`cl_arg') `latlong'
+					transformation(`transformation') radius(`"`radius'"') clustvar(`cl_arg') `latlong'
 			}
 			qui drop `touse2'
 		}

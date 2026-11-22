@@ -2,14 +2,13 @@
 version 14
 mata 
 
-real matrix getdistmat_normalized(real matrix s)
+real matrix getdistmat_normalized(real matrix s, | real scalar max_d)
 {	
 // Get matrix of distances from location matrix (using scpc function)
 // Normalize the matrix so the largest distance is 1
 
 	external real scalar latlongflag
 	real matrix distmat
-	real scalar max_d
 	
 	distmat = getdistmat(s)
 	max_d = max(distmat)

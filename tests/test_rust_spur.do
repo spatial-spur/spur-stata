@@ -92,10 +92,8 @@ void _test_verify_canon_test(
     real matrix y, X, s, distmat, sig, R, emat, emat_al, cv_r, M
     real colvector sg
     real scalar c_bm, cv_diff
-    struct struct_spatial_i0_test scalar t0
-    struct struct_spatial_i1_test scalar t1
-    struct struct_spatial_i0_test scalar t0r
-    struct struct_spatial_i1_test_residual scalar t1r
+    struct spur_diagnostic_design scalar design
+    struct spur_diagnostic_result scalar result
 
     emat = rnormal(q, nrep, 0, 1)
     y = st_data(., yname, touse)
@@ -107,24 +105,9 @@ void _test_verify_canon_test(
         R = get_R(sig, q)
         sg = _test_canon_signs(R)
         emat_al = sg :* emat
-        if (flavor == "i0") {
-            t0 = spatial_i0_test(y, distmat, emat_al)
-            assert(abs(t0.pvalue[1] - rust_p) < 1e-10)
-            assert(abs(t0.LR[1] - rust_stat) < 1e-10 * max((1, abs(rust_stat))))
-            assert(abs(t0.ha_parm - rust_ha) < 1e-10 * max((1, abs(rust_ha))))
-            cv_r = st_matrix(rust_cv_mat)
-            cv_diff = max(abs(t0.cvalue - cv_r) :/ (1 :+ abs(cv_r)))
-            assert(cv_diff < cv_tol)
-        }
-        else {
-            t1 = spatial_i1_test(y, distmat, emat_al)
-            assert(abs(t1.pvalue[1] - rust_p) < 1e-10)
-            assert(abs(t1.LR[1] - rust_stat) < 1e-10 * max((1, abs(rust_stat))))
-            assert(abs(t1.ha_parm - rust_ha) < 1e-10 * max((1, abs(rust_ha))))
-            cv_r = st_matrix(rust_cv_mat)
-            cv_diff = max(abs(t1.cv_vec - cv_r) :/ (1 :+ abs(cv_r)))
-            assert(cv_diff < cv_tol)
-        }
+        design = spur_prepare_diagnostic(y, sig, R, J(0, 0, .))
+        if (flavor == "i0") result = spatial_i0_test(design, distmat, emat_al)
+        else result = spatial_i1_test(design, distmat, emat_al)
     }
     else {
         if (strtrim(xnames) != "") {
@@ -140,25 +123,16 @@ void _test_verify_canon_test(
         R = get_R(sig, q)
         sg = _test_canon_signs(R)
         emat_al = sg :* emat
-        if (flavor == "i0resid") {
-            t0r = spatial_i0_test_residual(y, X, distmat, emat_al)
-            assert(abs(t0r.pvalue[1] - rust_p) < 1e-10)
-            assert(abs(t0r.LR[1] - rust_stat) < 1e-10 * max((1, abs(rust_stat))))
-            assert(abs(t0r.ha_parm - rust_ha) < 1e-10 * max((1, abs(rust_ha))))
-            cv_r = st_matrix(rust_cv_mat)
-            cv_diff = max(abs(t0r.cvalue - cv_r) :/ (1 :+ abs(cv_r)))
-            assert(cv_diff < cv_tol)
-        }
-        else {
-            t1r = spatial_i1_test_residual(y, X, distmat, emat_al)
-            assert(abs(t1r.pvalue[1] - rust_p) < 1e-10)
-            assert(abs(t1r.LR[1] - rust_stat) < 1e-10 * max((1, abs(rust_stat))))
-            assert(abs(t1r.ha_parm - rust_ha) < 1e-10 * max((1, abs(rust_ha))))
-            cv_r = st_matrix(rust_cv_mat)
-            cv_diff = max(abs(t1r.cv_vec - cv_r) :/ (1 :+ abs(cv_r)))
-            assert(cv_diff < cv_tol)
-        }
+        design = spur_prepare_residual_diagnostic(y, X, distmat, q)
+        if (flavor == "i0resid") result = spatial_i0_test(design, distmat, emat_al)
+        else result = spatial_i1_test(design, distmat, emat_al)
     }
+    assert(abs(result.pvalue[1] - rust_p) < 1e-10)
+    assert(abs(result.LR[1] - rust_stat) < 1e-10 * max((1, abs(rust_stat))))
+    assert(abs(result.ha_parm - rust_ha) < 1e-10 * max((1, abs(rust_ha))))
+    cv_r = st_matrix(rust_cv_mat)
+    cv_diff = max(abs(result.cv - cv_r) :/ (1 :+ abs(cv_r)))
+    assert(cv_diff < cv_tol)
 }
 
 void _test_verify_canon_halflife(
@@ -333,6 +307,21 @@ assert abs(r(p) - `p') < 1e-10
 assert abs(r(teststat) - `stat') < 1e-8
 assert `"`c(rngstate)'"' == `"`state_native'"'
 drop xsmall
+
+// Exactly representable increments preserve residual diagnostics after a large shift.
+gen double y_grid = round(y, 0.015625)
+gen double y_shift = y_grid + 1e13
+foreach backend in fallback rust {
+    foreach flavor in i0resid i1resid {
+        quietly spurtest `flavor' y_grid x1 x2, q(8) nrep(401) seed(42) backend(`backend')
+        local p = r(p)
+        local stat = r(teststat)
+        quietly spurtest `flavor' y_shift x1 x2, q(8) nrep(401) seed(42) backend(`backend')
+        assert abs(r(p) - `p') < 1e-12
+        assert reldif(r(teststat), `stat') < 1e-10
+    }
+}
+drop y_grid y_shift
 
 // 1b. If/in subsetting parity
 spurtest i0 y if _n <= 110 in 10/130, q(8) nrep(301) seed(11) latlong backend(rust)
@@ -729,5 +718,20 @@ capture confirm variable bad_y
 assert _rc != 0
 
 mata: assert(spur_halflife_accept((0.09 \ 0.10 \ 0.11), 100, .90) == (0 \ 0 \ 1))
+
+// Retain the last digit of an ISO radius specified in metres.
+clear
+set obs 5
+gen double s_1 = cond(_n == 2, 37.11177842377785, -1.0036422005124446)
+gen double s_2 = cond(_n == 2, -142.9944155287363, 10.076763636412846)
+gen double y = cond(_n == 2, 4, 1)
+foreach backend in rust fallback {
+    quietly spurtransform y, prefix(h_) transformation(iso) latlong ///
+        radius(15141901.145384492) backend(`backend') replace
+    assert h_y == cond(_n == 2, 3, -3)
+    quietly spurtransform y, prefix(h_) transformation(iso) latlong ///
+        radius(15141901.14538) backend(`backend') replace
+    assert h_y == 0
+}
 
 display "SPUR Stata Rust tests passed."

@@ -34,13 +34,13 @@ program define _spur_backend, rclass
         local plugin_ok 0
         local backend_reason "requested fallback"
         if "`req_backend'" != "fallback" {
-            local plugin_reason "compatible spur_rust.plugin (v3) could not be loaded. Install the matching plugin"
-            capture plugin call _spur_rust_plugin, ping_spur_v3
+            local plugin_reason "compatible spur_rust.plugin (v4) could not be loaded. Install the matching plugin"
+            capture plugin call _spur_rust_plugin, ping_spur_v4
             if _rc == 0 {
                 local plugin_ok 1
             }
             else {
-                capture plugin call _spur_rust_plugin, ping_spur_v1
+                capture plugin call _spur_rust_plugin, ping
                 if _rc != 0 {
                     capture program _spur_rust_plugin, plugin using("spur_rust.plugin")
                     if _rc != 0 {
@@ -50,14 +50,14 @@ program define _spur_backend, rclass
                         }
                     }
                 }
-                capture plugin call _spur_rust_plugin, ping_spur_v3
+                capture plugin call _spur_rust_plugin, ping_spur_v4
                 if _rc == 0 {
                     local plugin_ok 1
                 }
                 else {
-                    capture plugin call _spur_rust_plugin, ping_spur_v1
+                    capture plugin call _spur_rust_plugin, ping
                     if _rc == 0 {
-                        local plugin_reason "loaded spur_rust.plugin is incompatible with the required API (v3). Install the matching plugin and restart Stata"
+                        local plugin_reason "loaded spur_rust.plugin is incompatible with the required API (v4). Install the matching plugin and restart Stata"
                     }
                 }
             }
@@ -298,55 +298,8 @@ program define _spur_backend, rclass
         syntax , flavor(string) yvar(string) touse(varname) q(integer) nrep(integer) ///
             pmat(name) statscal(name) hascal(name) cvmat(name) [xvars(string) latlong]
 
-        capture noisily {
-            mata: _sp_t_e = rnormal(`q', `nrep', 0, 1)
-            mata: _sp_t_y = st_data(., "`yvar'", "`touse'")
-            mata: _sp_t_s = get_s_matrix("`touse'", "`latlong'")
-            mata: _sp_t_d = getdistmat_normalized(_sp_t_s)
-            if "`flavor'" == "i0" {
-                mata: _sp_t_r = spatial_i0_test(_sp_t_y, _sp_t_d, _sp_t_e)
-                mata: st_numscalar("`pmat'", _sp_t_r.pvalue[1])
-                mata: st_numscalar("`statscal'", _sp_t_r.LR[1])
-                mata: st_numscalar("`hascal'", _sp_t_r.ha_parm)
-                mata: st_matrix("`cvmat'", _sp_t_r.cvalue)
-            }
-            else if "`flavor'" == "i1" {
-                mata: _sp_t_r = spatial_i1_test(_sp_t_y, _sp_t_d, _sp_t_e)
-                mata: st_numscalar("`pmat'", _sp_t_r.pvalue[1])
-                mata: st_numscalar("`statscal'", _sp_t_r.LR[1])
-                mata: st_numscalar("`hascal'", _sp_t_r.ha_parm)
-                mata: st_matrix("`cvmat'", _sp_t_r.cv_vec)
-            }
-            else if "`flavor'" == "i0resid" | "`flavor'" == "i1resid" {
-                if strtrim(`"`xvars'"') != "" {
-                    mata: _sp_t_X = st_data(., `"`xvars'"', "`touse'")
-                    mata: _sp_t_X = J(rows(_sp_t_X), 1, 1), _sp_t_X
-                }
-                else {
-                    mata: _sp_t_X = J(rows(_sp_t_y), 1, 1)
-                }
-                if "`flavor'" == "i0resid" {
-                    mata: _sp_t_r = spatial_i0_test_residual(_sp_t_y, _sp_t_X, _sp_t_d, _sp_t_e)
-                    mata: st_matrix("`cvmat'", _sp_t_r.cvalue)
-                }
-                else {
-                    mata: _sp_t_r = spatial_i1_test_residual(_sp_t_y, _sp_t_X, _sp_t_d, _sp_t_e)
-                    mata: st_matrix("`cvmat'", _sp_t_r.cv_vec)
-                }
-                mata: st_numscalar("`pmat'", _sp_t_r.pvalue[1])
-                mata: st_numscalar("`statscal'", _sp_t_r.LR[1])
-                mata: st_numscalar("`hascal'", _sp_t_r.ha_parm)
-            }
-            else {
-                di as error "unknown SPUR Mata test flavor: `flavor'"
-                exit 198
-            }
-        }
-        local rc = _rc
-        capture mata: mata drop _sp_t_e _sp_t_y _sp_t_X _sp_t_s _sp_t_d _sp_t_r
-        if `rc' != 0 {
-            exit `rc'
-        }
+        mata: spur_mata_test("`flavor'", "`yvar'", "`xvars'", "`touse'", "`latlong'", ///
+            `q', `nrep', "`pmat'", "`statscal'", "`hascal'", "`cvmat'")
         exit
     }
 
@@ -359,19 +312,20 @@ program define _spur_backend, rclass
             mata: _sp_t_e = rnormal(`q', `nrep', 0, 1)
             mata: _sp_t_y = st_data(., "`yvar'", "`touse'")
             mata: _sp_t_s = get_s_matrix("`touse'", "`latlong'")
-            mata: _sp_t_d = getdistmat_normalized(_sp_t_s)
+            mata: _sp_t_diam = .
+            mata: _sp_t_d = getdistmat_normalized(_sp_t_s, _sp_t_diam)
             mata: _sp_t_r = spatial_persistence(_sp_t_y, _sp_t_d, _sp_t_e, `level' / 100)
             mata: st_numscalar("`cil'", _sp_t_r.hl_ci_lower)
             mata: st_numscalar("`ciu'", _sp_t_r.hl_ci_upper)
             if "`latlong'" != "" {
-                mata: st_numscalar("`maxdist'", max(getdistmat(_sp_t_s)) * 2 * pi() * 6371000.009)
+                mata: st_numscalar("`maxdist'", _sp_t_diam * 2 * pi() * 6371000.009)
             }
             else {
-                mata: st_numscalar("`maxdist'", max(getdistmat(_sp_t_s)))
+                mata: st_numscalar("`maxdist'", _sp_t_diam)
             }
         }
         local rc = _rc
-        capture mata: mata drop _sp_t_e _sp_t_y _sp_t_s _sp_t_d _sp_t_r
+        capture mata: mata drop _sp_t_e _sp_t_y _sp_t_s _sp_t_d _sp_t_diam _sp_t_r
         if `rc' != 0 {
             exit `rc'
         }
@@ -381,31 +335,27 @@ program define _spur_backend, rclass
     if "`subcmd'" == "mata_transform" {
         local 0 `"`rest'"'
         syntax , invars(string) outvars(string) touse(varname) ///
-            transformation(string) radius(real) [clustvar(string) latlong]
+            transformation(string) radius(string) [clustvar(string) latlong]
 
         capture noisily {
             mata: _sp_t_s = get_s_matrix("`touse'", "`latlong'")
-            if "`transformation'" == "cluster" {
-                mata: _sp_t_cl = get_cluster_matrix("`clustvar'", "`touse'")
+            mata: _sp_t_y = st_data(., "`invars'", "`touse'")
+            if "`transformation'" == "lbmgls" {
+                mata: _sp_t_hy = spur_lbm_gls(_sp_t_s, _sp_t_y)
             }
             else {
-                mata: _sp_t_cl = 0
-            }
-            mata: _sp_t_H = make_transform(_sp_t_s, "`transformation'", `radius', _sp_t_cl)
-            local n_in : word count `invars'
-            forvalues j = 1/`n_in' {
-                local inv : word `j' of `invars'
-                local outv : word `j' of `outvars'
-                mata: _sp_t_y = st_data(., "`inv'", "`touse'")
-                mata: _sp_t_hy = _sp_t_H * _sp_t_y
-                if "`transformation'" == "lbmgls" {
-                    mata: _sp_t_hy = _sp_t_hy :- mean(_sp_t_hy)
+                if "`transformation'" == "cluster" {
+                    mata: _sp_t_cl = get_cluster_matrix("`clustvar'", "`touse'")
                 }
-                mata: st_store(., "`outv'", "`touse'", _sp_t_hy)
+                else {
+                    mata: _sp_t_cl = 0
+                }
+                mata: _sp_t_hy = make_transform(_sp_t_s, "`transformation'", strtoreal("`radius'"), _sp_t_cl) * _sp_t_y
             }
+            mata: st_store(., tokens("`outvars'"), "`touse'", _sp_t_hy)
         }
         local rc = _rc
-        capture mata: mata drop _sp_t_s _sp_t_cl _sp_t_H _sp_t_y _sp_t_hy
+        capture mata: mata drop _sp_t_s _sp_t_cl _sp_t_y _sp_t_hy
         if `rc' != 0 {
             exit `rc'
         }

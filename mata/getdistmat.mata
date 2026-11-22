@@ -8,9 +8,9 @@ real matrix getdistmat(real matrix s)
 {	
 	external real scalar latlongflag
 	real matrix mat
-	real scalar n,i,c
-	real matrix d
-	real colvector scale, rad
+	real scalar n,i
+	real matrix d, radians
+	real colvector scale, rad, cos_lat, lat_sin, lon_sin
 	n=rows(s)
 	mat=J(n,n,0)
 	if(latlongflag==0){
@@ -25,17 +25,18 @@ real matrix getdistmat(real matrix s)
 			mat[.,i] = scale :* sqrt(rowsum((d :/ scale):^2))
 		}
 	}
-	else
-		{
-		c=pi()/180
-		for(i=1;i<=n;i++){
-			d=(.5*c)*(s:-s[i,.])
-			rad = sin(d[.,1]):^2 + cos(c*s[i,1])*(cos(c*s[.,1]):*(sin(d[.,2]):^2))
+	else {
+		radians = s * (pi() / 180)
+		cos_lat = cos(radians[., 1])
+		for (i = 1; i <= n; i++) {
+			lat_sin = sin((radians[i, 1] :- radians[., 1]) * .5)
+			lon_sin = sin((radians[i, 2] :- radians[., 2]) * .5)
+			rad = lat_sin :* lat_sin + ((cos_lat[i] :* cos_lat) :* lon_sin) :* lon_sin
 			rad = rad :* (rad :> 0)
 			rad = rad :* (rad :<= 1) :+ (rad :> 1)
-			mat[.,i] = asin(sqrt(rad))/pi()
+			mat[., i] = (1 / pi()) * asin(sqrt(rad))
 		}
-	}	
+	}
 	if (hasmissing(mat)) {
 		errprintf("pairwise distances exceed the numeric range\n")
 		exit(198)

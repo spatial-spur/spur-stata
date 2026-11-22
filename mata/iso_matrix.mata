@@ -14,18 +14,14 @@ real matrix iso_matrix(real matrix s, real scalar b)
 	real matrix distmat
 	real matrix dist_below_b
 	real matrix iso_mat
-	real scalar num_no_neighbors
+	real scalar num_no_neighbors, distance_unit
 
 		
 	distmat = getdistmat(s) 
 	
-	if(latlongflag==1) {
-		distmat = distmat * 2 * pi() * 6371000.009 // great circle distance
-	}
-	
-	stata("disp as text"+char(34)+"Sanity check: Distance between observations 1 and 2 is "+strofreal(distmat[1,2], "%9.0g")+", specified radius is "+strofreal(b, "%9.0g"))
-	
-	dist_below_b = (distmat :> 0) :& (distmat :<= b)
+	distance_unit = latlongflag ? 2 * pi() * 6371000.009 : 1
+	stata("disp as text"+char(34)+"Sanity check: Distance between observations 1 and 2 is "+strofreal(distmat[1,2] * distance_unit, "%9.0g")+", specified radius is "+strofreal(b, "%9.0g"))
+	dist_below_b = (distmat :> 0) :& (distmat :<= b / distance_unit)
 
 	num_no_neighbors = sum(rowsum(dist_below_b) :== 0)
 

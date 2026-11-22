@@ -2,26 +2,27 @@
 version 14
 mata
 
-real matrix get_R(real matrix sig, real scalar qmax)
+void spur_sorted_eigensystem(real matrix sigma, real matrix V, real colvector d)
 {
+    real colvector order_by_eval
+    symeigensystem(sigma, V, d)
+    d = d'
+    order_by_eval = order(d, -1)
+    d = d[order_by_eval]
+    V = V[., order_by_eval]
+}
 
-	real matrix V, R
-	real colvector d, ds, colj
-	real colvector ii
-	real scalar j, i, best_abs, sign_cutoff
+real matrix spur_select_basis(real matrix V, real colvector d, real scalar qmax)
+{
+    real matrix R
+    real colvector ds, colj
+    real scalar j, i, best_abs, sign_cutoff
 
-	if (qmax < 2 | qmax >= rows(sig)) {
-		errprintf("q must satisfy 2 <= q < n\n")
-		exit(198)
-	}
-	
-	symeigensystem(sig, V, d)
-	d = d'
-	
-	ii = order(d,-1)
-	d = d[ii]
-	V = V[.,ii]
-	
+    if (qmax < 2 | qmax >= rows(V)) {
+        errprintf("q must satisfy 2 <= q < n\n")
+        exit(198)
+    }
+
 	ds = d[1..qmax]
 	if (ds[1] <= 0 | ds[1] >= . | ds[qmax] >= . | ds[qmax] <= 1e-12 * ds[1]) {
 		errprintf("SPUR covariance basis has insufficient positive rank for requested q\n")
@@ -43,4 +44,11 @@ real matrix get_R(real matrix sig, real scalar qmax)
 	return(R)
 }
 
+real matrix get_R(real matrix sigma, real scalar q)
+{
+    real matrix V
+    real colvector d
+    spur_sorted_eigensystem(sigma, V, d)
+    return(spur_select_basis(V, d, q))
+}
 end

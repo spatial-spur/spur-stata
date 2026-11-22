@@ -2,137 +2,51 @@
 version 14
 mata
 
-// Define the struct for Spatial_I1_Test
-struct struct_spatial_i0_test {
-    real vector LR
-    real vector pvalue
-    real vector cvalue
-    real scalar ha_parm
-	real matrix cvalue_mat
-	real matrix pvalue_mat
-	real vector rho_grid
-}
+struct spur_diagnostic_result scalar spatial_i0_test(struct spur_diagnostic_design scalar design,
+    real matrix distmat, real matrix emat)
+{
+    real scalar ha_parm, i, j
+    real colvector rho_grid, LR, pvalue, cv, P
+    real rowvector frequencies, lr_draws
+    real matrix R, om_i0, om_ha, ch_omi_ho, ch_omi_ha, samples
+    struct spur_diagnostic_result scalar result
 
-
-struct struct_spatial_i0_test scalar spatial_i0_test(real matrix Y, real matrix distmat, real matrix emat) {
-    // Declare all variables
-    real scalar q, n, rho, n_y, rho_min, rho_max, n_rho
-    real vector lam, rho_grid, sz_vec, cv_vec, LR, pvalue, cvalue
-    real matrix sigdm_bm, R, sigdm_rho, sigma, sigma_dm, sigdm_wn, om_rho, om_wn, om_bm
-    real matrix om_i0, om_ho, om_ha, ch_omi_ho, ch_omi_ha, ch_om_ho_mat, pvalue_mat, cvalue_mat, ch_om_ho
-    real matrix X, P, y_P_ho, y_P_ha, q_P_ho, q_P_ha, y_ho, y_ho_ho, y_ho_ha, q_ho_ho, q_ho_ha, lr_ho, sigdm_ho
-    real scalar ha_parm, c, i, ir, j
-
-    q = rows(emat)
-    n = rows(distmat)
-	
-
-    // BM covariance matrix (approximation for demeaned value)
-    sigdm_bm = get_sigma_lbm_dm(distmat)
-
-    // Construct R .. eigenvectors for low-frequency weights
-    R = get_R(sigdm_bm, q)
-
-    // Value of om_ho for rhobar = rhobar_max
-    rho = 0.001
-    c = getcbar(rho, distmat)
-    sigdm_rho = get_sigma_dm(distmat, c)
-
-    // Matrices used in analysis
-    om_rho = R' * sigdm_rho * R
-    om_bm = R' * sigdm_bm * R
-
-    if (spur_shape_equal(om_rho, om_bm)) {
+    R = design.R
+    om_i0 = spur_diagnostic_omega(distmat, getcbar(.001, distmat), R, design.M)
+    if (spur_shape_equal(om_i0, design.om_bm)) {
         errprintf("SPUR covariance shapes are uninformative\n")
         exit(198)
     }
 
-    // Find value of Ha parameter that yields (roughly 50% power)
-    om_i0 = om_rho
-    om_ho = om_rho
-    ha_parm = get_ha_parm_I0(om_ho, om_i0, om_bm, emat)
-    om_ha = om_i0 + ha_parm * om_bm
-
-    // Matrices for carrying out tests
-    ch_omi_ho = cholesky(invsym(om_ho))'
+    ha_parm = get_ha_parm_I0(om_i0, design.om_bm, emat)
+    om_ha = om_i0 + ha_parm * design.om_bm
+    ch_omi_ho = cholesky(invsym(om_i0))'
     ch_omi_ha = cholesky(invsym(om_ha))'
 
-    // Get LR for data
-    n_y = cols(Y)
-    LR = J(n_y, 1, .)
-    for (i = 1; i <= n_y; i++) {
-        if (max(Y[,i]) - min(Y[,i]) == 0) {
-            errprintf("response Y is constant; SPUR inference requires variation in Y\n")
-            exit(198)
-        }
-        X = Y[,i] :- mean(Y[,i])
-        X = X :/ max(abs(X))
-        P = R' * X
-        if (norm(P) == 0 | norm(P) <= 1e-12 * norm(X)) {
-            errprintf("projected SPUR vector has zero norm\n")
-            exit(198)
-        }
-        y_P_ho = ch_omi_ho * P
-        y_P_ha = ch_omi_ha * P
-        q_P_ho = colsum(y_P_ho:^2)'
-        q_P_ha = colsum(y_P_ha:^2)'
-        LR[i] = q_P_ho / q_P_ha
+    LR = J(cols(design.projected_y), 1, .)
+    for (i = 1; i <= rows(LR); i++) {
+        P = design.projected_y[., i]
+        LR[i] = colsum((ch_omi_ho * P):^2) / colsum((ch_omi_ha * P):^2)
     }
 
-    // Construct om_ho for a grid of values of rho
-    rho_min = 0.0001
-    rho_max = 0.03
-    n_rho = 30
-    rho_grid = rangen(rho_min, rho_max, n_rho)
-    ch_om_ho_mat = asarray_create("real",1)
-    for (i = 1; i <= n_rho; i++) {
-        om_ho = I(q)
-        rho = rho_grid[i]
-        if (rho > 0) {
-            c = getcbar(rho, distmat)
-            sigdm_ho = get_sigma_dm(distmat, c)
-            om_ho = R' * sigdm_ho * R
-        }
-		asarray(ch_om_ho_mat, i, cholesky(om_ho)')
-    }
-
-    pvalue_mat = J(n_rho, n_y, .)
-    sz_vec = (0.01, 0.05, 0.10)
-    cvalue_mat = J(n_rho, 3, .)
-
-    for (ir = 1; ir <= n_rho; ir++) {
-        ch_om_ho = asarray(ch_om_ho_mat,ir)
-        y_ho = ch_om_ho' * emat
-        y_ho_ho = ch_omi_ho * y_ho
-        y_ho_ha = ch_omi_ha * y_ho
-        q_ho_ho = colsum(y_ho_ho:^2)
-        q_ho_ha = colsum(y_ho_ha:^2)
-        lr_ho = q_ho_ho :/ q_ho_ha
-        cv_vec = spur_quantile(lr_ho', (1 :- sz_vec'))
-        cvalue_mat[ir,] = cv_vec'
-        for (j = 1; j <= n_y; j++) {
-            pvalue_mat[ir,j] = mean(lr_ho' :> LR[j])
+    // Maximize each tail area and critical value over the I(0) null grid.
+    rho_grid = rangen(.0001, .03, 30)
+    frequencies = (.99, .95, .90)
+    cv = J(3, 1, 0)
+    pvalue = J(rows(LR), 1, 0)
+    for (i = 1; i <= rows(rho_grid); i++) {
+        samples = cholesky(spur_diagnostic_omega(distmat, getcbar(rho_grid[i], distmat), R, design.M)) * emat
+        lr_draws = colsum((ch_omi_ho * samples):^2) :/ colsum((ch_omi_ha * samples):^2)
+        cv = rowmax((cv, spur_quantile(lr_draws', frequencies')))
+        for (j = 1; j <= rows(LR); j++) {
+            pvalue[j] = max((pvalue[j], mean(lr_draws' :> LR[j])))
         }
     }
-	
 
-    cvalue = colmax(cvalue_mat)'
-    pvalue = colmax(pvalue_mat)'
-
-	
-	
-	// Struct output
-     struct struct_spatial_i0_test scalar SP
-     SP.LR = LR
-     SP.pvalue = pvalue
-     SP.cvalue = cvalue
-     SP.ha_parm = ha_parm
-	 SP.cvalue_mat = cvalue_mat
-	 SP.pvalue_mat = pvalue_mat
-	 SP.rho_grid = rho_grid
-
-     return(SP)
+    result.LR = LR
+    result.pvalue = pvalue
+    result.cv = cv
+    result.ha_parm = ha_parm
+    return(result)
 }
-
-
 end
