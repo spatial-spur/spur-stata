@@ -28,6 +28,10 @@ real matrix spur_select_basis(real matrix V, real colvector d, real scalar qmax)
 		errprintf("SPUR covariance basis has insufficient positive rank for requested q\n")
 		exit(198)
 	}
+    if (d[qmax] - d[qmax + 1] <= 1.6e-11 * max((1, d[1]))) {
+        errprintf("Requested q splits a tied eigenspace. Choose q at an eigenvalue gap.\n")
+        exit(198)
+    }
     R = V[., 1..qmax]
 
 	// Earliest nearly-maximal entry sets the sign in both backends.

@@ -34,7 +34,7 @@
 This command implements a method to construct confidence sets about the half-life of spatial processes developed by {help spurtest##mw2024:Müller and Watson (2024)}. This inference is based on the persistence parameter in the spatial local-to-unity model. The half-life is the distance at which the correlation is 1/2.
 
 {pstd}
-The command reports the hull of the half-lives accepted on the authors' finite Table 1 grid. The grid spans 0.001 to 3 sample diameters with a final point at 100 diameters. Acceptance at that final point is displayed as an open upper endpoint under the replication convention. A continuous confidence set can have different endpoints.
+The command inverts the continuous half-life tests and refines changes in acceptance on the transformed scale h/(1+h). It evaluates the zero and infinite limits explicitly. Narrow confidence-set components between search probes can escape detection.
 
 {pstd}
 {cmd:spurhalflife} is part of a package of commands that also includes {cmd:spurtest} and {cmd:spurtransform}. A practical guide to these methods is provided in a paper accompanying this implementation ({help spurtest##bbv2026:Becker, Boll and Voth (2026)}), please cite this paper when using this code.
@@ -90,8 +90,10 @@ If the option is not specified, the {it:p} {it:s_*} variables present are interp
 {synoptset 20 tabbed}{...}
 {p2col 5 23 26 2: Scalars}{p_end}
 {synopt:{cmd:r(tied)}}indicator of a tied eigenspace reported by Rust{p_end}
-{synopt:{cmd:r(ci_l)}}Smallest accepted grid point{p_end}
-{synopt:{cmd:r(ci_u)}}Largest accepted grid point, missing when the last grid point was accepted or the grid set is empty{p_end}
+{synopt:{cmd:r(ci_l)}}Lower endpoint of the confidence-set hull{p_end}
+{synopt:{cmd:r(ci_u)}}Upper endpoint of the hull. Missing for an unbounded or empty set{p_end}
+{synopt:{cmd:r(components)}}Matrix of lower and upper endpoints for detected components, when nonempty{p_end}
+{synopt:{cmd:r(unbounded)}}One when the confidence set is unbounded{p_end}
 {synopt:{cmd:r(empty)}}indicator that no tested half-life was accepted{p_end}
 {synopt:{cmd:r(max_dist)}}Maximum pairwise distance in the sample, in coordinate units for Euclidean inputs or meters for geographic inputs{p_end}
 {p2col 5 23 26 2: Macros}{p_end}

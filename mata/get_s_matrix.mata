@@ -2,7 +2,7 @@
 version 16.0
 mata
 
-real matrix get_s_matrix(string scalar touse, string scalar latlong)
+real matrix get_s_matrix(string scalar touse, string scalar latlong, | real scalar minobs)
 {
 	real matrix s
     real scalar ns, i, slist_len
@@ -32,12 +32,13 @@ real matrix get_s_matrix(string scalar touse, string scalar latlong)
 	
 	// ----------------------------------------------------------------------
 	
+	if (args() < 3) minobs = 5
 	ns=rows(s)
 	if(sum(rowmissing(s) :== 0) < ns){
 		stata("disp as text"+char(34)+"missing value(s) in s_* variable; aborting"+char(34))
 		exit(999)
 	}
-	if(ns<5){
+	if(ns<minobs){
 		stata("disp as text"+char(34)+"too few locations found in variables s_1, s_2 etc; aborting"+char(34))
 		exit(999)
 	}		

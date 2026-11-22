@@ -14,4 +14,17 @@ real colvector spur_quantile(real colvector x, real vector probs)
     }
     return(out)
 }
+
+real colvector spur_rank_cutoffs(real colvector draws)
+{
+    real colvector rank, cutoffs
+    real scalar j
+    rank = floor((rows(draws) + 1) :/ (100 \ 20 \ 10))
+    cutoffs = J(3, 1, .)
+    draws = sort(draws, -1)
+    for (j = 1; j <= 3; j++) {
+        if (rank[j] > 0) cutoffs[j] = draws[rank[j]]
+    }
+    return(cutoffs)
+}
 end

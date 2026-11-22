@@ -34,8 +34,8 @@ program define _spur_backend, rclass
         local plugin_ok 0
         local backend_reason "requested fallback"
         if "`req_backend'" != "fallback" {
-            local plugin_reason "compatible spur_rust.plugin (v4) could not be loaded. Install the matching plugin"
-            capture plugin call _spur_rust_plugin, ping_spur_v4
+            local plugin_reason "compatible spur_rust.plugin (v5) could not be loaded. Install the matching plugin"
+            capture plugin call _spur_rust_plugin, ping_spur_v5
             if _rc == 0 {
                 local plugin_ok 1
             }
@@ -50,15 +50,22 @@ program define _spur_backend, rclass
                         }
                     }
                 }
-                capture plugin call _spur_rust_plugin, ping_spur_v4
+                capture plugin call _spur_rust_plugin, ping_spur_v5
                 if _rc == 0 {
                     local plugin_ok 1
                 }
                 else {
                     capture plugin call _spur_rust_plugin, ping
                     if _rc == 0 {
-                        local plugin_reason "loaded spur_rust.plugin is incompatible with the required API (v4). Install the matching plugin and restart Stata"
+                        local plugin_reason "loaded spur_rust.plugin is incompatible with the required API (v5). Install the matching plugin and restart Stata"
                     }
+                }
+            }
+            if `plugin_ok' == 1 {
+                capture plugin call _spur_rust_plugin, require_spec 0.3.7
+                if _rc != 0 {
+                    local plugin_ok 0
+                    local plugin_reason "loaded spur_rust.plugin needs methods spec 0.3.7 or newer. Install the matching plugin and restart Stata"
                 }
             }
             local backend_reason ""
@@ -80,7 +87,7 @@ program define _spur_backend, rclass
 
     if "`subcmd'" == "check_coords" {
         local 0 `"`rest'"'
-        syntax , touse(varname) [latlong quiet]
+        syntax , touse(varname) [latlong quiet minobs(integer 5)]
 
         local slist ""
         local d 0
@@ -115,7 +122,7 @@ program define _spur_backend, rclass
 
         qui count if `touse'
         local ns = r(N)
-        if `ns' < 5 {
+        if `ns' < `minobs' {
             disp as text "too few locations found in variables s_1, s_2 etc; aborting"
             exit 999
         }
@@ -254,7 +261,7 @@ program define _spur_backend, rclass
             tempfile emat_file
             matrix `cv' = J(3, 1, .)
             set seed `seed'
-            _spur_backend write_emat, q(`q') nrep(`nrep') file(`"`emat_file'"')
+            _spur_backend write_emat, q(`=2*`q'') nrep(`nrep') file(`"`emat_file'"')
 
             local k_x_raw : word count `xvars'
             local latlong_flag = cond("`latlong'" != "", 1, 0)
@@ -268,19 +275,9 @@ program define _spur_backend, rclass
                 exit `rc'
             }
 
-            if "`req_backend'" == "auto" & scalar(`tied_scal') == 1 {
-                set seed `seed'
-                _spur_backend mata_test, flavor(`flavor') yvar(`yvar') xvars(`xvars') touse(`touse') `latlong' ///
-                    q(`q') nrep(`nrep') pmat(`p') statscal(`teststat') hascal(`ha') cvmat(`cv')
-                local used_backend "fallback"
-                local tied_val 1
-                local backend_reason "tied eigenspace"
-            }
-            else {
-                _spur_backend print_coords, n(`n_obs') d(`d') `latlong'
-                local used_backend "rust"
-                local tied_val = scalar(`tied_scal')
-            }
+            _spur_backend print_coords, n(`n_obs') d(`d') `latlong'
+            local used_backend "rust"
+            local tied_val = scalar(`tied_scal')
         }
 
         return scalar p = scalar(`p')
@@ -306,17 +303,21 @@ program define _spur_backend, rclass
     if "`subcmd'" == "mata_halflife" {
         local 0 `"`rest'"'
         syntax , yvar(string) touse(varname) q(integer) nrep(integer) level(real) ///
-            cil(name) ciu(name) maxdist(name) [latlong]
+            cil(name) ciu(name) maxdist(name) components(name) ncomp(name) [latlong]
 
         capture noisily {
             mata: _sp_t_e = rnormal(`q', `nrep', 0, 1)
             mata: _sp_t_y = st_data(., "`yvar'", "`touse'")
-            mata: _sp_t_s = get_s_matrix("`touse'", "`latlong'")
+            mata: _sp_t_s = get_s_matrix("`touse'", "`latlong'", 3)
             mata: _sp_t_diam = .
             mata: _sp_t_d = getdistmat_normalized(_sp_t_s, _sp_t_diam)
             mata: _sp_t_r = spatial_persistence(_sp_t_y, _sp_t_d, _sp_t_e, `level' / 100)
             mata: st_numscalar("`cil'", _sp_t_r.hl_ci_lower)
             mata: st_numscalar("`ciu'", _sp_t_r.hl_ci_upper)
+            mata: st_numscalar("`ncomp'", rows(_sp_t_r.components))
+            if scalar(`ncomp') > 0 {
+                mata: st_matrix("`components'", _sp_t_r.components)
+            }
             if "`latlong'" != "" {
                 mata: st_numscalar("`maxdist'", _sp_t_diam * 2 * pi() * 6371000.009)
             }

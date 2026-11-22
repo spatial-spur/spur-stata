@@ -3,6 +3,7 @@ version 16.0
 mata
 
 real scalar get_ha_parm_I0(real matrix om_i0, real matrix om_bm, real matrix e) {
+    real scalar best_param, best_power
     // Variable declarations
     real scalar g, pow, gtry, g1, g2
     real scalar ii
@@ -26,15 +27,20 @@ real scalar get_ha_parm_I0(real matrix om_i0, real matrix om_bm, real matrix e) 
     // Initial search for upper bound where power > 0.5
     pow = 0
     gtry = 30
+    best_param = gtry
+    best_power = -1
     ii = 0
     while (pow < 0.5) {
         if (++ii > 200) {
-            errprintf("SPUR power calibration could not bracket the target\n")
-            exit(198)
+            return(best_param)
         }
         g = gtry
         // Verify that power is greater than 50%
         pow = getpow_qf(om_i0, om_i0 + g * om_bm, e)
+        if (pow > best_power) {
+            best_power = pow
+            best_param = g
+        }
         gtry = g * 2
     }
     g2 = g

@@ -13,34 +13,48 @@ struct spur_diagnostic_result {
 real matrix spur_diagnostic_omega(real matrix distmat, real scalar c, real matrix R, real matrix M)
 {
     real matrix sigma
-    if (rows(M) == 0) sigma = get_sigma_dm(distmat, c)
+    if (missing(c)) {
+        sigma = distmat :== 0
+        sigma = (rows(M) == 0 ? demeanmat(sigma) : M * sigma * M)
+    }
+    else if (rows(M) == 0) sigma = get_sigma_dm(distmat, c)
     else sigma = get_sigma_residual(distmat, c, M)
     return(R' * sigma * R)
 }
 
 struct spur_diagnostic_design scalar spur_prepare_diagnostic(real matrix Y, real matrix sigma,
-    real matrix R, real matrix M)
+    real matrix R, real matrix Qx, real scalar center_response)
 {
     real colvector y, projected
-    real scalar j
+    real scalar j, anchor, input_norm
     struct spur_diagnostic_design scalar design
 
     design.R = R
     design.om_bm = R' * sigma * R
-    design.M = M
+    design.M = J(0, 0, .)
     design.projected_y = J(cols(R), cols(Y), .)
     for (j = 1; j <= cols(Y); j++) {
-        y = Y[., j] :- Y[1, j]
+        anchor = center_response ? Y[1, j] : 0
+        y = Y[., j] :- anchor
         if (hasmissing(y)) {
             y = Y[., j] :/ max(abs(Y[., j]))
-            y = y :- y[1]
+            if (center_response) y = y :- y[1]
         }
         if (max(abs(y)) == 0) {
             errprintf("response Y is constant; SPUR inference requires variation in Y\n")
             exit(198)
         }
         y = y :/ max(abs(y))
-        y = y :- mean(y)
+        if (cols(Qx) == 0) y = y :- mean(y)
+        else {
+            input_norm = norm(y)
+            y = y - Qx * (Qx' * y)
+            y = y - Qx * (Qx' * y)
+            if (norm(y) <= 1e-12 * input_norm) {
+                errprintf("residualized response Y has zero variation orthogonal to X\n")
+                exit(198)
+            }
+        }
         projected = R' * y
         if (norm(projected) <= 1e-12 * norm(y)) {
             errprintf("projected SPUR vector has zero norm\n")
@@ -54,9 +68,10 @@ struct spur_diagnostic_design scalar spur_prepare_diagnostic(real matrix Y, real
 struct spur_diagnostic_design scalar spur_prepare_residual_diagnostic(real matrix Y,
     real matrix X, real matrix distmat, real scalar q)
 {
-    real scalar n, k, j, pass, prev, scale, cnorm
+    real scalar n, k, j, pass, prev, scale, cnorm, center_response
     real matrix Qx, M, sigma
     real colvector column, constant
+    struct spur_diagnostic_design scalar design
 
     n = rows(distmat)
     k = cols(X)
@@ -71,8 +86,10 @@ struct spur_diagnostic_design scalar spur_prepare_residual_diagnostic(real matri
 
     // Column-normalized MGS with reorthogonalization.
     Qx = J(n, k, 0)
+    center_response = 0
     for (j = 1; j <= k; j++) {
         column = X[., j]
+        if (all(column :== column[1])) center_response = 1
         scale = max(abs(column))
         if (scale <= 0 | scale >= .) {
             errprintf("design matrix is rank-deficient; residual tests require full column rank\n")
@@ -105,7 +122,9 @@ struct spur_diagnostic_design scalar spur_prepare_residual_diagnostic(real matri
     }
 
     M = I(n) - Qx * Qx'
-    sigma = get_sigma_residual(distmat, getcbar(.999, distmat), M)
-    return(spur_prepare_diagnostic(Y, sigma, get_R(sigma, q), M))
+    sigma = M * (-0.5 * distmat) * M
+    design = spur_prepare_diagnostic(Y, sigma, get_R(sigma, q), Qx, center_response)
+    design.M = M
+    return(design)
 }
 end

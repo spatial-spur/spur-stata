@@ -88,7 +88,7 @@ void _test_verify_canon_test(
     struct spur_diagnostic_design scalar design
     struct spur_diagnostic_result scalar result
 
-    emat = rnormal(q, nrep, 0, 1)
+    emat = rnormal(2*q, nrep, 0, 1)
     y = st_data(., yname, touse)
     s = get_s_matrix(touse, latlong)
     distmat = getdistmat_normalized(s)
@@ -97,8 +97,8 @@ void _test_verify_canon_test(
         sig = get_sigma_lbm_dm(distmat)
         R = get_R(sig, q)
         sg = _test_canon_signs(R)
-        emat_al = sg :* emat
-        design = spur_prepare_diagnostic(y, sig, R, J(0, 0, .))
+        emat_al = (sg \ sg) :* emat
+        design = spur_prepare_diagnostic(y, sig, R, J(0, 0, .), 1)
         if (flavor == "i0") result = spatial_i0_test(design, distmat, emat_al)
         else result = spatial_i1_test(design, distmat, emat_al)
     }
@@ -111,11 +111,10 @@ void _test_verify_canon_test(
             X = J(rows(y), 1, 1)
         }
         M = I(rows(y)) - X * invsym(X' * X) * X'
-        c_bm = getcbar(0.999, distmat)
-        sig = M * expm1(-c_bm * distmat) * M
+        sig = M * (-0.5 * distmat) * M
         R = get_R(sig, q)
         sg = _test_canon_signs(R)
-        emat_al = sg :* emat
+        emat_al = (sg \ sg) :* emat
         design = spur_prepare_residual_diagnostic(y, X, distmat, q)
         if (flavor == "i0resid") result = spatial_i0_test(design, distmat, emat_al)
         else result = spatial_i1_test(design, distmat, emat_al)
@@ -150,8 +149,7 @@ void _test_verify_canon_halflife(
     y = st_data(., yname, touse)
     s = get_s_matrix(touse, latlong)
     distmat = getdistmat_normalized(s)
-    c_bm = getcbar(0.999, distmat)
-    sig = get_sigma_dm(distmat, c_bm)
+    sig = get_sigma_lbm_dm(distmat)
     R = get_R(sig, q)
     sg = _test_canon_signs(R)
     emat_al = sg :* emat
@@ -162,7 +160,6 @@ void _test_verify_canon_halflife(
     assert(abs(md - rust_md) < 1e-12 * max((1, abs(md))))
     cil = ci.hl_ci_lower
     ciu = ci.hl_ci_upper
-    if (ciu >= 100) ciu = .
     if (!normdist) {
         cil = cil * md
         ciu = ciu * md
@@ -569,24 +566,15 @@ gen double s_2 = sin(theta)
 gen double x1 = sin(2 * theta) + 0.1 * cos(3 * theta)
 gen double y = cos(theta) + 0.5 * x1
 
-spurtest i0 y, q(15) nrep(200) seed(42) backend(auto)
-assert r(tied) == 1
-assert "`r(backend)'" == "fallback"
-assert "`r(backend_reason)'" == "tied eigenspace"
-
-spurtest i0 y, q(15) nrep(200) seed(42) backend(rust)
+foreach be in auto rust fallback {
+    capture spurtest i0 y, q(15) nrep(200) seed(42) backend(`be')
+    assert _rc != 0
+    capture spurhalflife y, q(15) nrep(200) seed(42) backend(`be')
+    assert _rc != 0
+}
+spurtest i0 y, q(14) nrep(200) seed(42) backend(auto)
 assert r(tied) == 1
 assert "`r(backend)'" == "rust"
-
-spur y x1, q(15) nrep(200) seed(42) backend(auto)
-assert r(tied) == 1
-assert "`r(backend)'" == "fallback"
-assert "`r(diagnostics_backend_reason)'" == "tied eigenspace"
-assert "`r(transform_backend)'" == "fallback"
-rename (h_y h_x1) (auto_hy auto_hx1)
-spur y x1, q(15) nrep(200) seed(42) backend(fallback) replace
-assert_var_close auto_hy h_y 1e-12
-assert_var_close auto_hx1 h_x1 1e-12
 
 // ---------------------------------------------------------------------------
 // 6. NN ties & co-located points in lbmgls (rank < n - 1)
@@ -710,7 +698,6 @@ foreach backend in rust auto fallback {
 capture confirm variable bad_y
 assert _rc != 0
 
-mata: assert(spur_halflife_accept((0.09 \ 0.10 \ 0.11), 100, .90) == (0 \ 0 \ 1))
 
 // Retain the last digit of an ISO radius specified in metres.
 clear
@@ -748,6 +735,10 @@ mata:
     D = abs(v * J(1, rows(v), 1) - J(rows(v), 1, 1) * v') / 59
     supported = spur_prepare_residual_diagnostic(sin(v), (1e6 * v :+ 1, -1e6 * v), D, 8)
     assert(cols(supported.R) == 8)
+    x_near = 1 :+ 1e-8 * (v :- 1) / 59
+    a = spur_prepare_residual_diagnostic(sin(v), x_near, D, 8)
+    b = spur_prepare_residual_diagnostic(sin(v) + 1e9 * x_near, x_near, D, 8)
+    assert(mreldif(a.projected_y / norm(a.projected_y), b.projected_y / norm(b.projected_y)) < 1e-6)
 end
 capture mata: unsupported = spur_prepare_residual_diagnostic(sin(v), v, D, 8)
 assert _rc == 198

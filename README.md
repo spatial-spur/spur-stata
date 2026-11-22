@@ -20,7 +20,7 @@ If you *also* want to download the example data and do-file (will be saved to th
 
     . net get spur, replace from(https://raw.githubusercontent.com/spatial-spur/spur-stata/v0.1.1/)
 
-Then, you can run the example do-file, which reproduces Table 1 from [Müller & Watson 2024](https://www.princeton.edu/~umueller/SPUR.pdf) based on the data from [Chetty et. al. (2014)](https://doi.org/10.1093/qje/qju022) (see [Becker, Boll and Voth 2026](https://journals.sagepub.com/doi/10.1177/1536867X261449932) for details):
+Then, you can run the example do-file, which revisits the application in Table 1 of [Müller & Watson 2024](https://www.princeton.edu/~umueller/SPUR.pdf) based on the data from [Chetty et. al. (2014)](https://doi.org/10.1093/qje/qju022) (see [Becker, Boll and Voth 2026](https://journals.sagepub.com/doi/10.1177/1536867X261449932) for details):
 
     . do example
 
@@ -64,7 +64,7 @@ spurtest i1 am, latlong
 // Transform the variable am to remove the spatial unit root and save the transformed variable as h_am
 spurtransform am, prefix("h_") latlong
 
-// Estimate the half-life confidence set for am on the Table 1 grid
+// Estimate the half-life confidence set for am
 spurhalflife am, latlong                
 
 ```
@@ -81,12 +81,11 @@ Müller, Ulrich K. and Mark W. Watson "Spatial Unit Roots and Spurious Regressio
 SPUR inference requires at least two informative weighted directions. Residual
 procedures also require `q` no larger than the residual degrees of freedom.
 Experiments with insufficient covariance rank or proportional covariance shapes
-return an error. Half-life reports the hull of accepted points on Müller and
-Watson’s Table 1 grid. An open upper endpoint means the last tested point at
-100 sample diameters was accepted. Euclidean half-lives use the coordinate
-units. Geographic half-lives use meters. Both backends use type-7 simulation
-quantiles and a common sign convention for the basis. Finite-simulation results
-can differ from earlier Mata releases.
+return an error. The half-life command refines detected confidence-set
+components and evaluates the zero and infinite limits explicitly. Its hull
+is available in `r(ci_l)` and `r(ci_u)`. Euclidean half-lives use the
+coordinate units. Geographic half-lives use metres. SPUR uses rank p-values and
+the corresponding order statistics for critical values.
 
 The combined `spur` command runs OLS with a constant. Its LBM GLS columns are
 centered. The transformed intercept reflects that normalization. For a manual

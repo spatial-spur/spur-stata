@@ -111,7 +111,7 @@ program define spur, rclass sortpreserve
 		matrix `diagnostic_cvs' = J(4, 3, .)
 		tempfile emat_file
 		set seed `seed'
-		_spur_backend write_emat, q(`q') nrep(`nrep') file(`"`emat_file'"')
+		_spur_backend write_emat, q(`=2*`q'') nrep(`nrep') file(`"`emat_file'"')
 
 		local plugin_vars "`slist' `varlist' `h_tmp_vars'"
 		local pcmd `"spur_pipeline `d' `k_x_raw' 1 `latlong_flag' `q' `nrep' "`nthreads_arg'" `"`emat_file'"' "`diagnostics'" "`diagnostic_cvs'" "`pipe_tied'""'
@@ -123,19 +123,12 @@ program define spur, rclass sortpreserve
 		}
 
 		local diag_tied = scalar(`pipe_tied')
-		if "`req_backend'" == "auto" & `diag_tied' {
-			local use_pipeline 0
-		}
 	}
 
 	if `use_pipeline' == 0 {
 		local diag_backend "fallback"
 		local diag_reason "`requested_reason'"
 		local tr_reason "`requested_reason'"
-		if `diag_tied' {
-			local diag_reason "tied eigenspace"
-			local tr_reason "requested fallback"
-		}
 		set seed `seed'
 		mata: spur_mata_pipeline("`varlist'", "`h_tmp_vars'", "`touse_all'", "`slist'", ///
 			`latlong_flag', `q', `nrep', "`diagnostics'", "`diagnostic_cvs'")

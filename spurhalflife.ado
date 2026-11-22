@@ -29,7 +29,7 @@ program define spurhalflife, rclass sortpreserve
 	local plugin_ok = r(plugin_ok)
 	local backend_reason "`r(backend_reason)'"
 
-	_spur_backend check_coords, touse(`touse') `latlong' quiet
+	_spur_backend check_coords, touse(`touse') `latlong' quiet minobs(3)
 	local slist "`r(slist)'"
 	local d = r(d)
 	local n_obs = r(n)
@@ -39,23 +39,24 @@ program define spurhalflife, rclass sortpreserve
 		exit 198
 	}
 
-	tempname ci_l ci_u max_dist tied_scal
+	tempname ci_l ci_u max_dist tied_scal components ncomp
 	local used_backend ""
 	local tied_val 0
 
 	if "`req_backend'" == "fallback" | `plugin_ok' == 0 {
 		set seed `seed'
 		_spur_backend mata_halflife, yvar(`varlist') touse(`touse') `latlong' q(`q') nrep(`nrep') ///
-			level(`level') cil(`ci_l') ciu(`ci_u') maxdist(`max_dist')
+			level(`level') cil(`ci_l') ciu(`ci_u') maxdist(`max_dist') components(`components') ncomp(`ncomp')
 		local used_backend "fallback"
 	}
 	else {
+		matrix `components' = J(65, 2, .)
 		tempfile emat_file
 		set seed `seed'
 		_spur_backend write_emat, q(`q') nrep(`nrep') file(`"`emat_file'"')
 
 		local latlong_flag = cond("`latlong'" != "", 1, 0)
-		local pcmd `"spur_halflife `d' `latlong_flag' `q' `nrep' "`level'" "`nthreads_arg'" `"`emat_file'"' "`ci_l'" "`ci_u'" "`max_dist'" "`tied_scal'""'
+		local pcmd `"spur_halflife `d' `latlong_flag' `q' `nrep' "`level'" "`nthreads_arg'" `"`emat_file'"' "`ci_l'" "`ci_u'" "`max_dist'" "`tied_scal'" "`components'" "`ncomp'""'
 		capture noisily _spur_backend plugin_call, vars(`slist' `varlist') cond(`touse') cmd(`"`pcmd'"')
 		local rc = _rc
 		capture erase `"`emat_file'"'
@@ -63,26 +64,21 @@ program define spurhalflife, rclass sortpreserve
 			exit `rc'
 		}
 
-		if "`req_backend'" == "auto" & scalar(`tied_scal') == 1 {
-			set seed `seed'
-			_spur_backend mata_halflife, yvar(`varlist') touse(`touse') `latlong' q(`q') nrep(`nrep') ///
-				level(`level') cil(`ci_l') ciu(`ci_u') maxdist(`max_dist')
-			local used_backend "fallback"
-			local tied_val 1
-			local backend_reason "tied eigenspace"
-		}
-		else {
-			_spur_backend print_coords, n(`n_obs') d(`d') `latlong'
-			local used_backend "rust"
-			local tied_val = scalar(`tied_scal')
-		}
-	}
+        _spur_backend print_coords, n(`n_obs') d(`d') `latlong'
+        local used_backend "rust"
+        local tied_val = scalar(`tied_scal')
+    }
 
-	local top_grid_accepted = !missing(scalar(`ci_u')) & scalar(`ci_u') == 100
-	if `top_grid_accepted' {
-		scalar `ci_u' = .
-	}
-	local empty = missing(scalar(`ci_l'))
+    local n_components = scalar(`ncomp')
+    local empty = `n_components' == 0
+    local unbounded = !`empty' & missing(scalar(`ci_u'))
+    if !`empty' {
+        matrix `components' = `components'[1..`n_components', 1..2]
+        if "`normdist'" == "" {
+            mata: st_matrix("`components'", st_matrix("`components'") * st_numscalar("`max_dist'"))
+        }
+        matrix colnames `components' = lower upper
+    }
 
 	if "`normdist'" == "" {
 		scalar `ci_l' = scalar(`ci_l') * scalar(`max_dist')
@@ -93,6 +89,8 @@ program define spurhalflife, rclass sortpreserve
 	return scalar ci_u = scalar(`ci_u')
 	return scalar max_dist = scalar(`max_dist')
 	return scalar empty = `empty'
+    return scalar unbounded = `unbounded'
+    return scalar n_components = `n_components'
 	return scalar tied = `tied_val'
 	return local backend "`used_backend'"
 	return local backend_reason "`backend_reason'"
@@ -110,21 +108,20 @@ program define spurhalflife, rclass sortpreserve
 			local units "unit of original coordinates"
 		}
 	}
-	di as text "Spatial half-life `level'% confidence set on the Table 1 grid"
-	di as text "Hull of accepted grid points (in `units')"
-	di as result "---------------------------------------"
-	if `empty' {
-		di as result "No grid point was accepted."
-	}
-	else {
-		di as result "Lower bound: " %12.6g scalar(`ci_l')
-		if `top_grid_accepted' {
-			di as result "Upper bound:    inf (largest tested point accepted at 100 sample diameters)"
-		}
-		else {
-			di as result "Upper bound: " %12.6g scalar(`ci_u')
-		}
-	}
-	di as result "---------------------------------------"
+    di as text "Spatial half-life `level'% confidence set (in `units')"
+    di as result "---------------------------------------"
+    if `empty' {
+        di as result "Empty confidence set."
+    }
+    else {
+        forvalues i = 1/`n_components' {
+            local upper = cond(missing(`components'[`i', 2]), "Inf", strofreal(`components'[`i', 2], "%12.6g"))
+            di as result "[" %12.6g `components'[`i', 1] ", " strtrim("`upper'") "]"
+        }
+    }
+    di as result "---------------------------------------"
+    if !`empty' {
+        return matrix components = `components'
+    }
 
 end

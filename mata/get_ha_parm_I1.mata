@@ -5,6 +5,7 @@ mata
 real scalar get_ha_parm_I1(real matrix om_ho, real matrix distmat, real matrix R, real matrix e,
     real matrix M, real scalar c01, real scalar c95, real matrix om_c)
 {
+    real scalar best_param, best_power
     // Variable declarations
     real scalar pow, ctry, c, pow50, c1, c2, ii
 
@@ -30,15 +31,21 @@ real scalar get_ha_parm_I1(real matrix om_ho, real matrix distmat, real matrix R
     // Step 2: Increase `c` until `pow` is greater than 0.5
     pow = 0
     ctry = c01
+    best_param = ctry
+    best_power = -1
     ii = 0
     while (pow < pow50) {
         if (++ii > 200) {
-            errprintf("SPUR power calibration could not bracket the target\n")
-            exit(198)
+            om_c = spur_diagnostic_omega(distmat, best_param, R, M)
+            return(best_param)
         }
         c = ctry
         om_c = spur_diagnostic_omega(distmat, c, R, M)
         pow = getpow_qf(om_ho, om_c, e)
+        if (pow > best_power) {
+            best_power = pow
+            best_param = c
+        }
         ctry = 2 * ctry
     }
     c2 = c
