@@ -21,7 +21,8 @@ real matrix iso_matrix(real matrix s, real scalar b)
 	
 	distance_unit = latlongflag ? 2 * pi() * 6371000.009 : 1
 	stata("disp as text"+char(34)+"Sanity check: Distance between observations 1 and 2 is "+strofreal(distmat[1,2] * distance_unit, "%9.0g")+", specified radius is "+strofreal(b, "%9.0g"))
-	dist_below_b = (distmat :> 0) :& (distmat :<= b / distance_unit)
+	dist_below_b = distmat :< b / distance_unit
+	_diag(dist_below_b, 0)
 
 	num_no_neighbors = sum(rowsum(dist_below_b) :== 0)
 

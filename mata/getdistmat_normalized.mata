@@ -13,7 +13,7 @@ real matrix getdistmat_normalized(real matrix s, | real scalar max_d)
 	distmat = getdistmat(s)
 	max_d = max(distmat)
 	if (max_d <= 0 | max_d >= .) {
-		errprintf("all coordinates are identical; normalization requires distinct locations\n")
+		errprintf("all coordinates are identical (1 distinct location, co-located-pair fraction 1); normalization requires distinct locations\n")
 		exit(198)
 	}
 	distmat = distmat :/ max_d

@@ -24,7 +24,7 @@ program define spur, rclass sortpreserve
 	}
 
 	if `q' < 2 {
-		di as error "q() must be at least 2"
+		di as error "q=`q' must be at least 2"
 		exit 198
 	}
 	if `nrep' < 1 {
@@ -87,7 +87,7 @@ program define spur, rclass sortpreserve
 	local slist "`r(slist)'"
 	local d = r(d)
 	if `q' >= r(n) {
-		di as error "q() must be smaller than the number of observations"
+		di as error "q=`q' must be smaller than the number of observations (n=`=r(n)')"
 		exit 198
 	}
 
@@ -99,11 +99,11 @@ program define spur, rclass sortpreserve
 		local h_tmp_vars "`h_tmp_vars' `h_tmp_`j''"
 	}
 
-	tempname diagnostics diagnostic_cvs pipe_tied
+	tempname diagnostics diagnostic_cvs info
 	local diag_backend "rust"
 	local diag_reason ""
 	local tr_reason ""
-	local diag_tied 0
+	matrix `info' = J(4, 3, .)
 	local latlong_flag = ("`latlong'" != "")
 
 	if `use_pipeline' == 1 {
@@ -114,7 +114,7 @@ program define spur, rclass sortpreserve
 		_spur_backend write_emat, q(`=2*`q'') nrep(`nrep') file(`"`emat_file'"')
 
 		local plugin_vars "`slist' `varlist' `h_tmp_vars'"
-		local pcmd `"spur_pipeline `d' `k_x_raw' 1 `latlong_flag' `q' `nrep' "`nthreads_arg'" `"`emat_file'"' "`diagnostics'" "`diagnostic_cvs'" "`pipe_tied'""'
+		local pcmd `"spur_pipeline `d' `k_x_raw' 1 `latlong_flag' `q' `nrep' "`nthreads_arg'" `"`emat_file'"' "`diagnostics'" "`diagnostic_cvs'" "`info'""'
 		capture noisily _spur_backend plugin_call, vars(`plugin_vars') cond(`touse_all') cmd(`"`pcmd'"')
 		local rc = _rc
 		capture erase `"`emat_file'"'
@@ -122,7 +122,6 @@ program define spur, rclass sortpreserve
 			exit `rc'
 		}
 
-		local diag_tied = scalar(`pipe_tied')
 	}
 
 	if `use_pipeline' == 0 {
@@ -131,8 +130,11 @@ program define spur, rclass sortpreserve
 		local tr_reason "`requested_reason'"
 		set seed `seed'
 		mata: spur_mata_pipeline("`varlist'", "`h_tmp_vars'", "`touse_all'", "`slist'", ///
-			`latlong_flag', `q', `nrep', "`diagnostics'", "`diagnostic_cvs'")
+			`latlong_flag', `q', `nrep', "`diagnostics'", "`diagnostic_cvs'", "`info'")
 	}
+	matrix rownames `info' = i0 i1 i0resid i1resid
+	matrix colnames `info' = tied all_directions best_tuning_power
+	local diag_tied = max(`info'[1,1], `info'[2,1], `info'[3,1], `info'[4,1])
 	matrix rownames `diagnostics' = i0 i1 i0resid i1resid
 	matrix colnames `diagnostics' = teststat p ha_param
 
@@ -205,6 +207,7 @@ program define spur, rclass sortpreserve
 	matlist `transformed_scpcstats', border(all)
 	display as text "The transformed intercept reflects LBM GLS centering."
 
+	_spur_backend inference_note, q(`q') nrep(`nrep') info(`info') labels(i0 i1 i0resid i1resid)
 	local row 0
 	foreach diagnostic in i0 i1 i0resid i1resid {
 		local ++row
@@ -236,6 +239,7 @@ program define spur, rclass sortpreserve
 	}
 
 	return scalar tied = `any_tied'
+	return matrix diagnostic_info = `info'
 	return local backend "`used_backend'"
 	return local diagnostics_backend "`diag_backend'"
 	return local diagnostics_backend_reason "`diag_reason'"

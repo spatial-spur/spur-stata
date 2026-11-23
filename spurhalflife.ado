@@ -11,9 +11,13 @@ program define spurhalflife, rclass sortpreserve
 		exit 198
 	}
 	if `q' < 2 {
-		di as error "q() must be at least 2 for half-life inference"
+		di as error "q=`q' must be at least 2 for half-life inference"
 		exit 198
 	}
+    if `q' > 100 {
+        di as error "q=`q' exceeds the validated half-life quadrature limit of 100"
+        exit 198
+    }
 	if `nrep' < 1 {
 		di as error "nrep() must be at least 1"
 		exit 198
@@ -35,18 +39,18 @@ program define spurhalflife, rclass sortpreserve
 	local n_obs = r(n)
 
 	if `q' >= `n_obs' {
-		di as error "q() must be smaller than the number of observations"
+		di as error "q=`q' must be smaller than the number of observations (n=`n_obs')"
 		exit 198
 	}
 
-	tempname ci_l ci_u max_dist tied_scal components ncomp
+	tempname ci_l ci_u max_dist info components ncomp
 	local used_backend ""
-	local tied_val 0
+	matrix `info' = J(1,3,.)
 
 	if "`req_backend'" == "fallback" | `plugin_ok' == 0 {
 		set seed `seed'
 		_spur_backend mata_halflife, yvar(`varlist') touse(`touse') `latlong' q(`q') nrep(`nrep') ///
-			level(`level') cil(`ci_l') ciu(`ci_u') maxdist(`max_dist') components(`components') ncomp(`ncomp')
+			level(`level') cil(`ci_l') ciu(`ci_u') maxdist(`max_dist') components(`components') ncomp(`ncomp') infomat(`info')
 		local used_backend "fallback"
 	}
 	else {
@@ -56,7 +60,7 @@ program define spurhalflife, rclass sortpreserve
 		_spur_backend write_emat, q(`q') nrep(`nrep') file(`"`emat_file'"')
 
 		local latlong_flag = cond("`latlong'" != "", 1, 0)
-		local pcmd `"spur_halflife `d' `latlong_flag' `q' `nrep' "`level'" "`nthreads_arg'" `"`emat_file'"' "`ci_l'" "`ci_u'" "`max_dist'" "`tied_scal'" "`components'" "`ncomp'""'
+		local pcmd `"spur_halflife `d' `latlong_flag' `q' `nrep' "`level'" "`nthreads_arg'" `"`emat_file'"' "`ci_l'" "`ci_u'" "`max_dist'" "`info'" "`components'" "`ncomp'""'
 		capture noisily _spur_backend plugin_call, vars(`slist' `varlist') cond(`touse') cmd(`"`pcmd'"')
 		local rc = _rc
 		capture erase `"`emat_file'"'
@@ -66,7 +70,6 @@ program define spurhalflife, rclass sortpreserve
 
         _spur_backend print_coords, n(`n_obs') d(`d') `latlong'
         local used_backend "rust"
-        local tied_val = scalar(`tied_scal')
     }
 
     local n_components = scalar(`ncomp')
@@ -85,13 +88,15 @@ program define spurhalflife, rclass sortpreserve
 		scalar `ci_u' = scalar(`ci_u') * scalar(`max_dist')
 	}
 
+	_spur_backend inference_note, q(`q') nrep(`nrep') info(`info') level(`level')
 	return scalar ci_l = scalar(`ci_l')
 	return scalar ci_u = scalar(`ci_u')
 	return scalar max_dist = scalar(`max_dist')
 	return scalar empty = `empty'
     return scalar unbounded = `unbounded'
     return scalar n_components = `n_components'
-	return scalar tied = `tied_val'
+	return scalar tied = `info'[1,1]
+	return scalar all_directions = `info'[1,2]
 	return local backend "`used_backend'"
 	return local backend_reason "`backend_reason'"
 

@@ -708,10 +708,13 @@ gen double y = cond(_n == 2, 4, 1)
 foreach backend in rust fallback {
     quietly spurtransform y, prefix(h_) transformation(iso) latlong ///
         radius(15141901.145384492) backend(`backend') replace
-    assert h_y == cond(_n == 2, 3, -3)
+    assert abs(h_y) < 1e-14
+    quietly spurtransform y, prefix(h_) transformation(iso) latlong ///
+        radius(15141901.14539) backend(`backend') replace
+    assert abs(h_y - cond(_n == 2, 3, -.75)) < 1e-14
     quietly spurtransform y, prefix(h_) transformation(iso) latlong ///
         radius(15141901.14538) backend(`backend') replace
-    assert h_y == 0
+    assert abs(h_y) < 1e-14
 }
 
 // A small group of widely separated and close sites needs a decay above 10,240.
@@ -736,10 +739,9 @@ mata:
     supported = spur_prepare_residual_diagnostic(sin(v), (1e6 * v :+ 1, -1e6 * v), D, 8)
     assert(cols(supported.R) == 8)
     x_near = 1 :+ 1e-8 * (v :- 1) / 59
-    a = spur_prepare_residual_diagnostic(sin(v), x_near, D, 8)
-    b = spur_prepare_residual_diagnostic(sin(v) + 1e9 * x_near, x_near, D, 8)
-    assert(mreldif(a.projected_y / norm(a.projected_y), b.projected_y / norm(b.projected_y)) < 1e-6)
 end
+capture mata: unsupported = spur_prepare_residual_diagnostic(sin(v), x_near, D, 8)
+assert _rc == 198
 capture mata: unsupported = spur_prepare_residual_diagnostic(sin(v), v, D, 8)
 assert _rc == 198
 
@@ -790,6 +792,38 @@ foreach backend in rust fallback {
     assert !missing(r(p))
     quietly spurtest i1 y, q(2) nrep(199) seed(42) backend(`backend')
     assert !missing(r(p))
+}
+
+// Rank resolution, complete eigenvalue blocks, and the half-life quadrature ceiling.
+clear
+set obs 20
+gen double s_1 = cos(2*_pi*(_n-1)/20)
+gen double s_2 = sin(2*_pi*(_n-1)/20)
+gen double y = s_1 + .4*sin(4*_pi*(_n-1)/20)
+foreach backend in rust fallback {
+    quietly spurtest i0 y, q(14) nrep(199) seed(31) backend(`backend')
+    assert r(tied) == 1 & r(all_directions) == 0
+    capture spurtest i0 y, q(15) nrep(199) backend(`backend')
+    assert _rc != 0
+    quietly spurhalflife y, q(4) nrep(18) seed(31) normdist backend(`backend')
+    assert r(ci_l) == 0 & r(unbounded) == 1 & r(tied) == 1
+    capture spurhalflife y, q(101) nrep(10) backend(`backend')
+    assert _rc == 198
+}
+
+clear
+input double(s_1 y x)
+0 1 1
+.000001 -1 -1
+.3 0 2
+.6 0 0
+1 0 -1
+end
+gen double shifted_y = 1e9 + y
+gen double shifted_x = 1e9 + x
+foreach backend in rust fallback {
+    quietly spurtransform y x shifted_y shifted_x, transformation(lbmgls) prefix(z_) backend(`backend') replace
+    assert abs(z_y-z_shifted_y) < 1e-9 & abs(z_x-z_shifted_x) < 1e-9
 }
 
 display "SPUR Stata Rust tests passed."

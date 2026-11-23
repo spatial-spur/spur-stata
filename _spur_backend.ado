@@ -7,6 +7,37 @@ program define _spur_backend, rclass
     gettoken subcmd rest : 0, parse(" ,")
     local rest = ltrim(`"`rest'"')
 
+    if "`subcmd'" == "inference_note" {
+        local 0 `"`rest'"'
+        syntax , q(integer) nrep(integer) info(name) [labels(string) level(real 0)]
+        local note
+        local scope
+        forvalues i = 1/`=rowsof(`info')' {
+            if `info'[`i',2] == 1 local scope " uses all positive directions and"
+        }
+        if `q' >= 40 | "`scope'" != "" local note "q=`q'`scope' retains higher spatial frequencies. Results can be sensitive to local noise."
+        if `level' > 0 {
+            if `q' <= 5 local note "`note' q=`q' provides few spatial contrasts for estimating the half-life."
+            if `nrep'/(`nrep'+1) < `level'/100 local note "`note' With nrep=`nrep' the minimum p-value is `=1/(`nrep'+1)'. The `level'% confidence set necessarily covers [0, infinity]."
+        }
+        else {
+            local missed
+            foreach alpha in 1 5 10 {
+                if `nrep'+1 < 100/`alpha' local missed "`missed' `alpha'%"
+            }
+            if "`missed'" != "" local note "`note' With nrep=`nrep' the minimum p-value is `=1/(`nrep'+1)'. Rejection is unattainable at`missed'."
+            forvalues i = 1/`=rowsof(`info')' {
+                if `info'[`i',3] < . {
+                    local name : word `i' of `labels'
+                    local power = trim(string(100*`info'[`i',3], "%5.1f"))
+                    local note "`note' `name' did not reach the 50% tuning target. The best estimated power was `power'%."
+                }
+            }
+        }
+        if "`note'" != "" di as text strtrim("`note'")
+        exit
+    }
+
     if "`subcmd'" == "resolve" {
         local 0 `"`rest'"'
         syntax , [BACKend(string) nthreads(integer -1)]
@@ -34,8 +65,8 @@ program define _spur_backend, rclass
         local plugin_ok 0
         local backend_reason "requested fallback"
         if "`req_backend'" != "fallback" {
-            local plugin_reason "compatible spur_rust.plugin (v5) could not be loaded. Install the matching plugin"
-            capture plugin call _spur_rust_plugin, ping_spur_v5
+            local plugin_reason "compatible spur_rust.plugin (v6) could not be loaded. Install the matching plugin"
+            capture plugin call _spur_rust_plugin, ping_spur_v6
             if _rc == 0 {
                 local plugin_ok 1
             }
@@ -50,22 +81,22 @@ program define _spur_backend, rclass
                         }
                     }
                 }
-                capture plugin call _spur_rust_plugin, ping_spur_v5
+                capture plugin call _spur_rust_plugin, ping_spur_v6
                 if _rc == 0 {
                     local plugin_ok 1
                 }
                 else {
                     capture plugin call _spur_rust_plugin, ping
                     if _rc == 0 {
-                        local plugin_reason "loaded spur_rust.plugin is incompatible with the required API (v5). Install the matching plugin and restart Stata"
+                        local plugin_reason "loaded spur_rust.plugin is incompatible with the required API (v6). Install the matching plugin and restart Stata"
                     }
                 }
             }
             if `plugin_ok' == 1 {
-                capture plugin call _spur_rust_plugin, require_spec 0.3.8
+                capture plugin call _spur_rust_plugin, require_spec 0.3.9
                 if _rc != 0 {
                     local plugin_ok 0
-                    local plugin_reason "loaded spur_rust.plugin needs methods spec 0.3.8 or newer. Install the matching plugin and restart Stata"
+                    local plugin_reason "loaded spur_rust.plugin needs methods spec 0.3.9 or newer. Install the matching plugin and restart Stata"
                 }
             }
             local backend_reason ""
@@ -204,7 +235,7 @@ program define _spur_backend, rclass
             [xvars(string) latlong BACKend(string) nthreads(integer -1)]
 
         if `q' < 2 {
-            di as error "q() must be at least 2 for SPUR inference"
+            di as error "q=`q' must be at least 2 for SPUR inference"
             exit 198
         }
         if `nrep' < 1 {
@@ -249,18 +280,18 @@ program define _spur_backend, rclass
         local n_obs = r(n)
 
         if `q' >= `n_obs' {
-            di as error "q() must be smaller than the number of observations"
+            di as error "q=`q' must be smaller than the number of observations (n=`n_obs')"
             exit 198
         }
 
-        tempname p teststat ha cv tied_scal
+        tempname p teststat ha cv info
         local used_backend ""
-        local tied_val 0
+        matrix `info' = J(1, 3, .)
 
         if "`req_backend'" == "fallback" | `plugin_ok' == 0 {
             set seed `seed'
             _spur_backend mata_test, flavor(`flavor') yvar(`yvar') xvars(`xvars') touse(`touse') `latlong' ///
-                q(`q') nrep(`nrep') pmat(`p') statscal(`teststat') hascal(`ha') cvmat(`cv')
+                q(`q') nrep(`nrep') pmat(`p') statscal(`teststat') hascal(`ha') cvmat(`cv') infomat(`info')
             local used_backend "fallback"
         }
         else {
@@ -274,7 +305,7 @@ program define _spur_backend, rclass
             local plugin_vars "`slist' `yvar' `xvars'"
             capture noisily plugin call _spur_rust_plugin `plugin_vars' if `touse', ///
                 `plugin_subcmd' `d' `k_x_raw' `include_int' `latlong_flag' `q' `nrep' "`nthreads_arg'" ///
-                `"`emat_file'"' "`cv'" "`teststat'" "`p'" "`ha'" "`tied_scal'"
+                `"`emat_file'"' "`cv'" "`teststat'" "`p'" "`ha'" "`info'"
             local rc = _rc
             capture erase `"`emat_file'"'
             if `rc' != 0 {
@@ -283,14 +314,16 @@ program define _spur_backend, rclass
 
             _spur_backend print_coords, n(`n_obs') d(`d') `latlong'
             local used_backend "rust"
-            local tied_val = scalar(`tied_scal')
         }
 
+        _spur_backend inference_note, q(`q') nrep(`nrep') info(`info') labels(`flavor')
         return scalar p = scalar(`p')
         return scalar teststat = scalar(`teststat')
         return scalar ha_param = scalar(`ha')
         return matrix cv = `cv'
-        return scalar tied = `tied_val'
+        return scalar tied = `info'[1,1]
+        return scalar all_directions = `info'[1,2]
+        return scalar best_tuning_power = `info'[1,3]
         return local backend "`used_backend'"
         return local backend_reason "`backend_reason'"
         exit
@@ -299,17 +332,17 @@ program define _spur_backend, rclass
     if "`subcmd'" == "mata_test" {
         local 0 `"`rest'"'
         syntax , flavor(string) yvar(string) touse(varname) q(integer) nrep(integer) ///
-            pmat(name) statscal(name) hascal(name) cvmat(name) [xvars(string) latlong]
+            pmat(name) statscal(name) hascal(name) cvmat(name) infomat(name) [xvars(string) latlong]
 
         mata: spur_mata_test("`flavor'", "`yvar'", "`xvars'", "`touse'", "`latlong'", ///
-            `q', `nrep', "`pmat'", "`statscal'", "`hascal'", "`cvmat'")
+            `q', `nrep', "`pmat'", "`statscal'", "`hascal'", "`cvmat'", "`infomat'")
         exit
     }
 
     if "`subcmd'" == "mata_halflife" {
         local 0 `"`rest'"'
         syntax , yvar(string) touse(varname) q(integer) nrep(integer) level(real) ///
-            cil(name) ciu(name) maxdist(name) components(name) ncomp(name) [latlong]
+            cil(name) ciu(name) maxdist(name) components(name) ncomp(name) infomat(name) [latlong]
 
         capture noisily {
             mata: _sp_t_e = rnormal(`q', `nrep', 0, 1)
@@ -318,6 +351,7 @@ program define _spur_backend, rclass
             mata: _sp_t_diam = .
             mata: _sp_t_d = getdistmat_normalized(_sp_t_s, _sp_t_diam)
             mata: _sp_t_r = spatial_persistence(_sp_t_y, _sp_t_d, _sp_t_e, `level' / 100)
+            mata: st_matrix("`infomat'", (_sp_t_r.info, .))
             mata: st_numscalar("`cil'", _sp_t_r.hl_ci_lower)
             mata: st_numscalar("`ciu'", _sp_t_r.hl_ci_upper)
             mata: st_numscalar("`ncomp'", rows(_sp_t_r.components))

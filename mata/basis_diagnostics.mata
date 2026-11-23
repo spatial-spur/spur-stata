@@ -3,11 +3,12 @@ mata
 
 struct spur_diagnostic_design {
     real matrix R, om_bm, projected_y, M
+    real rowvector info
 }
 
 struct spur_diagnostic_result {
     real colvector LR, pvalue, cv
-    real scalar ha_parm
+    real scalar ha_parm, best_power
 }
 
 real matrix spur_diagnostic_omega(real matrix distmat, real scalar c, real matrix R, real matrix M)
@@ -73,7 +74,9 @@ struct spur_diagnostic_design scalar spur_prepare_residual_diagnostic(real matri
     real matrix X, real matrix distmat, real scalar q)
 {
     real scalar n, k, j, pass, prev, scale, cnorm, constant_norm_sq
-    real matrix Qx, M, sigma
+    real matrix Qx, M, sigma, U, Vt
+    real colvector singular
+    real rowvector info
     real colvector column, constant
     struct spur_diagnostic_design scalar design
 
@@ -84,7 +87,7 @@ struct spur_diagnostic_design scalar spur_prepare_residual_diagnostic(real matri
         exit(198)
     }
     if (q > n - k) {
-        errprintf("q cannot exceed residual degrees of freedom (n - rank(X))\n")
+        errprintf("q=%g cannot exceed residual degrees of freedom (n - rank(X) = %g)\n", q, n-k)
         exit(198)
     }
 
@@ -119,15 +122,20 @@ struct spur_diagnostic_design scalar spur_prepare_residual_diagnostic(real matri
         constant = constant - Qx * (Qx' * constant)
     }
     constant_norm_sq = sum(constant :^ 2)
-    if (constant_norm_sq > epsilon(1)) {
-        errprintf("SPUR residual tests require a design that spans a constant\n")
-        exit(198)
+    if (constant_norm_sq > (8 * epsilon(1))^2) {
+        svd(X :/ colmax(abs(X)), U, singular, Vt)
+        if (sqrt(constant_norm_sq) > 64 * epsilon(1) *
+            (1 + singular[1] * sqrt(sum((colsum(U)' :/ (sqrt(n) * singular)):^2)))) {
+            errprintf("SPUR residual tests require a design that spans a constant\n")
+            exit(198)
+        }
     }
 
     M = I(n) - Qx * Qx'
     sigma = M * (-0.5 * distmat) * M
     constant = (constant_norm_sq <= (8 * epsilon(1))^2 ? J(0, 1, .) : constant * sqrt(n))
-    design = spur_prepare_diagnostic(Y, sigma, get_R(sigma, q), Qx, constant)
+    design = spur_prepare_diagnostic(Y, sigma, get_R(sigma, q, info, distmat), Qx, constant)
+    design.info = info
     design.M = M
     return(design)
 }

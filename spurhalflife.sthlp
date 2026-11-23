@@ -15,7 +15,7 @@
 {synoptset 11}{...}
 {synopthdr}
 {synoptline}
-{synopt :{opt q(#)}}specifies the number of weighted averages to be used in the test. The default is {opt q(15)}.{p_end}
+{synopt :{opt q(#)}}sets the number of low-frequency weighted averages, from 2 through 100. The default is {opt q(15)}.{p_end}
 {synopt :{opt nrep(#)}}specifies the number of Monte Carlo draws to be used to simulate the distribution of the test statistic. The default is {opt nrep(100000)}.{p_end}
 {synopt :{opt seed(#)}}specifies the random seed used for the simulation draws. The default is {opt seed(42)}.{p_end}
 {synopt :{opt l:evel(#)}} specifies the desired confidence level in percent. The default is {opt level(95)}.{p_end}
@@ -55,7 +55,7 @@ If the option is not specified, the {it:p} {it:s_*} variables present are interp
 {title:Options}
 
 {phang}
-{opt q(#)} specifies the number of weighted averages to be used in the test. The default is {opt q(15)}. At least two informative directions are required; residual tests also require q not to exceed the residual degrees of freedom. See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker, Boll and Voth (2026)} for details.
+{opt q(#)} sets the number of low-frequency weighted averages, from 2 through 100. The default is {opt q(15)}. The retained spatial covariance directions must have positive rank. See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker, Boll and Voth (2026)} for details.
 
 {phang}
 {opt nrep(#)} specifies the number of Monte Carlo draws to be used to simulate the distribution of the test statistic. The default is {opt nrep(100000)}. See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker, Boll and Voth (2026)} for details.
@@ -73,6 +73,9 @@ If the option is not specified, the {it:p} {it:s_*} variables present are interp
 {opt norm:dist} specifies that the results are to be returned as fractions of the maximum pairwise distance in the sample. Otherwise, they are returned in meters (if {opt latlong}) or the units of the original Euclidean coordinates (if not {opt latlong}).
 
 {marker examples}{...}
+{pstd}
+SPUR diagnostics report the best simulated tuning power when the 50% target is out of reach. They identify nominal levels that the requested simulation count cannot attain. A fit using every positive direction or at least 40 components gives a high-frequency sensitivity advisory. Half-life inference flags limited information at 2–5 components and currently supports up to 100 components with its five-node quadrature.
+
 {title:Examples}
 
 {phang}{cmd:. sysuse auto}{p_end}
@@ -89,7 +92,8 @@ If the option is not specified, the {it:p} {it:s_*} variables present are interp
 
 {synoptset 20 tabbed}{...}
 {p2col 5 23 26 2: Scalars}{p_end}
-{synopt:{cmd:r(tied)}}indicator of a tied eigenspace reported by Rust{p_end}
+{synopt:{cmd:r(all_directions)}}one when q uses all positive directions{p_end}
+{synopt:{cmd:r(tied)}}indicator of a retained tied eigenspace{p_end}
 {synopt:{cmd:r(ci_l)}}Lower endpoint of the confidence-set hull{p_end}
 {synopt:{cmd:r(ci_u)}}Upper endpoint of the hull. Missing for an unbounded or empty set{p_end}
 {synopt:{cmd:r(components)}}Matrix of lower and upper endpoints for detected components, when nonempty{p_end}

@@ -3,8 +3,9 @@ mata
 
 void spur_mata_test(string scalar flavor, string scalar yvar, string scalar xvars,
     string scalar touse, string scalar latlong, real scalar q, real scalar nrep,
-    string scalar pmat, string scalar statscal, string scalar hascal, string scalar cvmat)
+    string scalar pmat, string scalar statscal, string scalar hascal, string scalar cvmat, string scalar infomat)
 {
+    real rowvector info
     real matrix Y, X, distmat, emat, sigma
     struct spur_diagnostic_design scalar design
     struct spur_diagnostic_result scalar result
@@ -19,11 +20,13 @@ void spur_mata_test(string scalar flavor, string scalar yvar, string scalar xvar
     }
     else {
         sigma = get_sigma_lbm_dm(distmat)
-        design = spur_prepare_diagnostic(Y, sigma, get_R(sigma, q), J(0, 0, .), J(0, 1, .))
+        design = spur_prepare_diagnostic(Y, sigma, get_R(sigma, q, info, distmat), J(0, 0, .), J(0, 1, .))
+        design.info = info
     }
     if (flavor == "i0" | flavor == "i0resid") result = spatial_i0_test(design, distmat, emat)
     else result = spatial_i1_test(design, distmat, emat)
 
+    st_matrix(infomat, (design.info, result.best_power))
     st_numscalar(pmat, result.pvalue[1])
     st_numscalar(statscal, result.LR[1])
     st_numscalar(hascal, result.ha_parm)
@@ -32,9 +35,10 @@ void spur_mata_test(string scalar flavor, string scalar yvar, string scalar xvar
 
 void spur_mata_pipeline(string scalar invars, string scalar outvars, string scalar touse,
     string scalar coordvars, real scalar latlong, real scalar q, real scalar nrep,
-    string scalar diagmat, string scalar cvmat)
+    string scalar diagmat, string scalar cvmat, string scalar infomat)
 {
     external real scalar latlongflag
+    real rowvector info, resid_info
     real matrix values, Y, X, distmat, sigma, V, emat, transformed
     real colvector d
     struct spur_diagnostic_design scalar design
@@ -48,7 +52,7 @@ void spur_mata_pipeline(string scalar invars, string scalar outvars, string scal
     distmat = getdistmat_normalized(st_data(., coordvars, touse))
     sigma = get_sigma_lbm_dm(distmat)
     spur_sorted_eigensystem(sigma, V, d)
-    design = spur_prepare_diagnostic(Y, sigma, spur_select_basis(V, d, q), J(0, 0, .), J(0, 1, .))
+    design = spur_prepare_diagnostic(Y, sigma, spur_select_basis(V, d, q, info, distmat), J(0, 0, .), J(0, 1, .))
     sigma = J(0, 0, .)
     transformed = spur_apply_lbm_gls(V, d, values)
     V = J(0, 0, .)
@@ -59,6 +63,9 @@ void spur_mata_pipeline(string scalar invars, string scalar outvars, string scal
     i0r = spatial_i0_test(design, distmat, emat)
     i1r = spatial_i1_test(design, distmat, emat)
 
+    resid_info = design.info
+    st_matrix(infomat, (info, i0.best_power) \ (info, i1.best_power) \
+        (resid_info, i0r.best_power) \ (resid_info, i1r.best_power))
     st_matrix(diagmat, (i0.LR, i0.pvalue, i0.ha_parm) \ (i1.LR, i1.pvalue, i1.ha_parm) \
         (i0r.LR, i0r.pvalue, i0r.ha_parm) \ (i1r.LR, i1r.pvalue, i1r.ha_parm))
     st_matrix(cvmat, i0.cv' \ i1.cv' \ i0r.cv' \ i1r.cv')

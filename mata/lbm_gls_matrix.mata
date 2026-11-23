@@ -9,7 +9,7 @@ real matrix spur_apply_lbm_gls(real matrix V, real colvector d, real matrix Y)
 
     keep = d :> 1e-10
     basis = select(V, keep')
-    transformed = basis * ((basis' * Y) :/ sqrt(select(d, keep)))
+    transformed = basis * ((basis' * spur_demean_clusters(Y, J(rows(Y), 1, 1))) :/ sqrt(select(d, keep)))
     return(transformed :- mean(transformed))
 }
 

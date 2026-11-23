@@ -15,7 +15,7 @@ struct spur_diagnostic_result scalar spatial_i0_test(struct spur_diagnostic_desi
     q = cols(R)
     floor_corr = mean(lvech(distmat) :== 0)
     if (floor_corr > .03) {
-        errprintf("I(0) null requires a co-located-pair fraction at or below 0.03.\n")
+        errprintf("I(0) null requires a co-located-pair fraction at or below 0.03. %s\n", spur_site_summary(distmat))
         exit(198)
     }
     c = (floor_corr < .001 ? getcbar(.001, distmat) : .)
@@ -25,7 +25,7 @@ struct spur_diagnostic_result scalar spatial_i0_test(struct spur_diagnostic_desi
         exit(198)
     }
 
-    ha_parm = get_ha_parm_I0(om_i0, design.om_bm, emat[(q+1)..(2*q), .])
+    ha_parm = get_ha_parm_I0(om_i0, design.om_bm, emat[(q+1)..(2*q), .], result.best_power)
     om_ha = om_i0 + ha_parm * design.om_bm
     ch_omi_ho = lusolve(cholesky(om_i0), I(q))
     ch_omi_ha = lusolve(cholesky(om_ha), I(q))

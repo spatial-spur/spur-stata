@@ -2,7 +2,8 @@
 version 16.0
 mata
 
-real scalar get_ha_parm_I0(real matrix om_i0, real matrix om_bm, real matrix e) {
+real scalar get_ha_parm_I0(real matrix om_i0, real matrix om_bm, real matrix e, | real scalar missed_power) {
+    real matrix mixture, limit_shape
     real scalar best_param, best_power
     // Variable declarations
     real scalar g, pow, gtry, g1, g2
@@ -22,24 +23,33 @@ real scalar get_ha_parm_I0(real matrix om_i0, real matrix om_bm, real matrix e) 
         pow = getpow_qf(om_i0, om_i0 + g * om_bm, e)
         gtry = g / 2
     }
-    g1 = g;
+    missed_power = .
+    if (pow == 0.5) return(g)
+    g1 = g
 
     // Initial search for upper bound where power > 0.5
+    best_param = g
+    best_power = pow
+    limit_shape = om_bm / trace(om_bm)
     pow = 0
-    gtry = 30
-    best_param = gtry
-    best_power = -1
+    gtry = (ii > 1 ? 2*g1 : 30)
     ii = 0
     while (pow < 0.5) {
         if (++ii > 200) {
+            missed_power = best_power
             return(best_param)
         }
         g = gtry
         // Verify that power is greater than 50%
-        pow = getpow_qf(om_i0, om_i0 + g * om_bm, e)
+        mixture = om_i0 + g * om_bm
+        pow = getpow_qf(om_i0, mixture, e)
         if (pow > best_power) {
             best_power = pow
             best_param = g
+        }
+        if (pow < 0.5 & max(abs(mixture / trace(mixture) - limit_shape)) <= 8*epsilon(1)) {
+            missed_power = best_power
+            return(best_param)
         }
         gtry = g * 2
     }

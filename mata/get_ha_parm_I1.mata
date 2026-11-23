@@ -3,7 +3,7 @@ version 16.0
 mata
 
 real scalar get_ha_parm_I1(real matrix om_ho, real matrix distmat, real matrix R, real matrix e,
-    real matrix M, real scalar c01, real scalar c95, real matrix om_c)
+    real matrix M, real scalar c01, real scalar c95, real matrix om_c, | real scalar missed_power)
 {
     real scalar best_param, best_power, min_distance
     // Variable declarations
@@ -26,18 +26,21 @@ real scalar get_ha_parm_I1(real matrix om_ho, real matrix distmat, real matrix R
         pow = getpow_qf(om_ho, om_c, e)
         ctry = ctry / 2
     }
+    missed_power = .
+    if (pow == 0.5) return(c)
     c1 = c
 
     // Step 2: Increase `c` until `pow` is greater than 0.5
+    best_param = c
+    best_power = pow
     pow = 0
-    ctry = c01
-    best_param = ctry
-    best_power = -1
+    ctry = (ii > 1 ? 2*c1 : c01)
     min_distance = min(select(vec(distmat), vec(distmat) :> 0))
     ii = 0
     while (pow < pow50) {
         if (++ii > 200) {
             om_c = spur_diagnostic_omega(distmat, best_param, R, M)
+            missed_power = best_power
             return(best_param)
         }
         c = ctry
@@ -49,6 +52,7 @@ real scalar get_ha_parm_I1(real matrix om_ho, real matrix distmat, real matrix R
         }
         if (pow < pow50 & exp(-c * min_distance) == 0) {
             if (best_param != c) om_c = spur_diagnostic_omega(distmat, best_param, R, M)
+            missed_power = best_power
             return(best_param)
         }
         ctry = 2 * ctry

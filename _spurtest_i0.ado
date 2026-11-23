@@ -13,6 +13,8 @@ program define _spurtest_i0, rclass sortpreserve
 	scalar `g_a' = r(ha_param)
 	matrix `cv' = r(cv)
 	local tied_val = r(tied)
+	local all = r(all_directions)
+	local best = r(best_tuning_power)
 	local used_backend "`r(backend)'"
 	local backend_reason "`r(backend_reason)'"
 
@@ -21,6 +23,8 @@ program define _spurtest_i0, rclass sortpreserve
 	return scalar ha_param = `g_a'
 	return matrix cv = `cv'
 	return scalar tied = `tied_val'
+	return scalar all_directions = `all'
+	return scalar best_tuning_power = `best'
 	return local backend "`used_backend'"
 	return local backend_reason "`backend_reason'"
 

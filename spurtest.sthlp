@@ -89,6 +89,9 @@ If the option is not specified, the {it:p} {it:s_*} variables present are interp
 {opt latlong} specifies that the spatial coordinates are given in latitude (stored in {it:s_1}) and longitude (stored in {it:s_2}) (see above).
 
 {marker examples}{...}
+{pstd}
+SPUR diagnostics report the best simulated tuning power when the 50% target is out of reach. They identify nominal levels that the requested simulation count cannot attain. A fit using every positive direction or at least 40 components gives a high-frequency sensitivity advisory. Half-life inference flags limited information at 2–5 components and currently supports up to 100 components with its five-node quadrature.
+
 {title:Examples}
 
 {phang}{cmd:. sysuse auto}{p_end}
@@ -107,7 +110,9 @@ If the option is not specified, the {it:p} {it:s_*} variables present are interp
 
 {synoptset 20 tabbed}{...}
 {p2col 5 23 26 2: Scalars}{p_end}
-{synopt:{cmd:r(tied)}}indicator of a tied eigenspace reported by Rust{p_end}
+{synopt:{cmd:r(best_tuning_power)}}highest power on the independent tuning draws when the 50% target was missed, otherwise missing{p_end}
+{synopt:{cmd:r(all_directions)}}one when q uses all positive directions{p_end}
+{synopt:{cmd:r(tied)}}indicator of a retained tied eigenspace{p_end}
 {synopt:{cmd:r(teststat)}}Test statistic (LFUR or LFST){p_end}
 {synopt:{cmd:r(p)}}P-value of the test{p_end}
 {synopt:{cmd:r(ha_param)}}Parameter for alternative hypothesis (c_a or g_a). See {help spurtest##mw2024:Müller and Watson (2024)} and {help spurtest##bbv2026:Becker, Boll and Voth (2026)} for details. {p_end}

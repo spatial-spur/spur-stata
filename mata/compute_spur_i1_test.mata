@@ -25,7 +25,7 @@ struct spur_diagnostic_result scalar spatial_i1_test(struct spur_diagnostic_desi
         exit(198)
     }
 
-    ha_parm = get_ha_parm_I1(om_ho, distmat, R, emat[(q+1)..(2*q), .], design.M, c01, c95, om_ha)
+    ha_parm = get_ha_parm_I1(om_ho, distmat, R, emat[(q+1)..(2*q), .], design.M, c01, c95, om_ha, result.best_power)
     lower = cholesky(om_ho)
     samples = lower * emat[1..q, .]
     precision_ho = lusolve(lower, I(q))

@@ -2,6 +2,14 @@
 version 16.0
 mata
 
+string scalar spur_site_summary(real matrix D)
+{
+    real scalar i, sites
+    sites = 1
+    for (i=2; i<=rows(D); i++) sites = sites + !any(D[i, 1..(i-1)] :== 0)
+    return(sprintf("%g distinct locations, co-located-pair fraction %8.6f.", sites, mean(lvech(D) :== 0)))
+}
+
 void spur_sorted_eigensystem(real matrix sigma, real matrix V, real colvector d)
 {
     real colvector order_by_eval
@@ -12,26 +20,30 @@ void spur_sorted_eigensystem(real matrix sigma, real matrix V, real colvector d)
     V = V[., order_by_eval]
 }
 
-real matrix spur_select_basis(real matrix V, real colvector d, real scalar qmax)
+real matrix spur_select_basis(real matrix V, real colvector d, real scalar qmax, | real rowvector info, real matrix distances)
 {
     real matrix R
     real colvector ds, colj
     real scalar j, i, best_abs, tolerance
 
-    if (qmax < 2 | qmax >= rows(V)) {
-        errprintf("q must satisfy 2 <= q < n\n")
+    if (qmax != trunc(qmax) | qmax < 2 | qmax >= rows(V)) {
+        errprintf("q=%g must satisfy 2 <= q < n=%g\n", qmax, rows(V))
         exit(198)
     }
 
-	ds = d[1..qmax]
-	if (ds[1] <= 0 | ds[1] >= . | ds[qmax] >= . | ds[qmax] <= 1e-12 * ds[1]) {
-		errprintf("SPUR covariance basis has insufficient positive rank for requested q\n")
-		exit(198)
-	}
-    if (d[qmax] - d[qmax + 1] <= max((1.6e-11 * d[1], 8 * epsilon(1) * rows(V)))) {
-        errprintf("Requested q splits a tied eigenspace. Choose q at an eigenvalue gap.\n")
+    ds = d[1..qmax]
+    tolerance = max((1.6e-11 * d[1], 8 * epsilon(1) * rows(V)))
+    if (ds[1] <= 0 | ds[1] >= . | ds[qmax] >= . | ds[qmax] <= 1e-12 * ds[1]) {
+        errprintf("SPUR covariance basis has insufficient positive rank for requested q=%g. Positive rank is %g.\n", qmax, sum(d :> 1e-12 * ds[1]))
+        if (args() >= 5) errprintf("%s\n", spur_site_summary(distances))
         exit(198)
     }
+    if (d[qmax] - d[qmax + 1] <= tolerance) {
+        errprintf("Requested q splits a tied eigenspace (q=%g). Choose q at an eigenvalue gap.\n", qmax)
+        if (args() >= 5) errprintf("%s\n", spur_site_summary(distances))
+        exit(198)
+    }
+    info = (any(ds[1..(qmax-1)] - ds[2..qmax] :<= tolerance), d[qmax+1] <= 1e-12*ds[1])
     R = V[., 1..qmax]
 
 	// Earliest nearly-maximal entry sets the sign in both backends.
@@ -48,11 +60,12 @@ real matrix spur_select_basis(real matrix V, real colvector d, real scalar qmax)
 	return(R)
 }
 
-real matrix get_R(real matrix sigma, real scalar q)
+real matrix get_R(real matrix sigma, real scalar q, | real rowvector info, real matrix distances)
 {
     real matrix V
     real colvector d
     spur_sorted_eigensystem(sigma, V, d)
-    return(spur_select_basis(V, d, q))
+    if (args() == 4) return(spur_select_basis(V, d, q, info, distances))
+    return(spur_select_basis(V, d, q, info))
 }
 end

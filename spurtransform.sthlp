@@ -62,7 +62,7 @@ If the option is not specified, the {it:p} {it:s_*} variables present are interp
 {opt transformation(nn)} differences each observation from the average of its neighbors tied at the smallest positive distance. It requires at least two distinct locations.
 
 {phang2}
-{opt transformation(iso)} differences each observation from the average of neighbors at positive distances up to and including {opt radius}. An observation with no such neighbors transforms to zero.
+{opt transformation(iso)} differences each observation from the average of other observations strictly within {opt radius}, including observations at the same site. An observation with no such neighbors transforms to zero.
 
 {phang2}
 {opt transformation(cluster)} requests the Cluster transformation, i.e. unweighted demeaning within a cluster of observations, where the cluster variable is specified by {opt clustvar}.

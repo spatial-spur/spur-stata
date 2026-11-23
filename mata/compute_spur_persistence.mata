@@ -3,6 +3,7 @@ mata
 
 struct struct_spatial_persistence {
     real scalar hl_ci_lower, hl_ci_upper
+    real rowvector info
     real matrix components
 }
 
@@ -54,9 +55,13 @@ struct struct_spatial_persistence scalar spatial_persistence(real matrix Z, real
     struct struct_spatial_persistence scalar result
 
     q = rows(emat)
+    if (q > 100) {
+        errprintf("q=%g exceeds the validated half-life quadrature limit of 100\n", q)
+        exit(198)
+    }
     nrep = cols(emat)
     bm = get_sigma_lbm_dm(distmat)
-    R = get_R(bm, q)
+    R = get_R(bm, q, result.info, distmat)
     design = spur_prepare_diagnostic(Z, bm, R, J(0, 0, .), J(0, 1, .))
     observed = design.projected_y
     R = R :- mean(R)

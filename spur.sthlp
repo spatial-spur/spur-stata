@@ -55,6 +55,9 @@ workflows, fit the Stata model and call {cmd:scpc} directly.
 
 
 {marker examples}{...}
+{pstd}
+SPUR diagnostics report the best simulated tuning power when the 50% target is out of reach. They identify nominal levels that the requested simulation count cannot attain. A fit using every positive direction or at least 40 components gives a high-frequency sensitivity advisory. Half-life inference flags limited information at 2–5 components and currently supports up to 100 components with its five-node quadrature.
+
 {title:Examples}
 
 {phang}{cmd:. spur am gini fracblack, latlong}{p_end}
@@ -70,7 +73,7 @@ workflows, fit the Stata model and call {cmd:scpc} directly.
 
 {synoptset 28 tabbed}{...}
 {p2col 5 28 31 2: Scalars}{p_end}
-{synopt:{cmd:r(tied)}}indicator of a tied eigenspace reported by Rust{p_end}
+{synopt:{cmd:r(tied)}}indicator of a retained tied eigenspace{p_end}
 {synopt:{cmd:r(i0_teststat)}}I(0) diagnostic test statistic{p_end}
 {synopt:{cmd:r(i0_p)}}I(0) diagnostic p-value{p_end}
 {synopt:{cmd:r(i1_teststat)}}I(1) diagnostic test statistic{p_end}
@@ -85,6 +88,7 @@ workflows, fit the Stata model and call {cmd:scpc} directly.
 {synopt:{cmd:r(transformed_r2)}}R-squared from the transformed regression{p_end}
 
 {p2col 5 28 31 2: Matrices}{p_end}
+{synopt:{cmd:r(diagnostic_info)}}rows i0, i1, i0resid, i1resid and columns tied, all_directions, best_tuning_power{p_end}
 {synopt:{cmd:r(diagnostics)}}diagnostic test statistics, p-values, and alternative parameters{p_end}
 {synopt:{cmd:r(levels_scpcstats)}}SCPC inference table from the levels regression{p_end}
 {synopt:{cmd:r(transformed_scpcstats)}}SCPC inference table from the transformed regression{p_end}
